@@ -37,7 +37,7 @@ CivicReach is a free, open civic tool for Canadians. Enter your address and inst
 This project is a single HTML file. No build step, no dependencies to install.
 
 1. Clone or download the repo
-2. Open `civic-contact.html` in any browser
+2. Open `index.html` in any browser
 3. Start searching
 
 ### API Keys
@@ -53,14 +53,6 @@ The Represent API is free and requires no key.
 The AI email drafting feature requires an [Anthropic API key](https://console.anthropic.com). This should **not** be hardcoded in the frontend — see the security section below.
 
 ---
-
-## Deployment
-
-### Free testing (recommended starting point)
-
-1. Push this repo to GitHub
-2. Go to **Settings → Pages** and set the source to your main branch
-3. Your site will be live at `https://yourusername.github.io/civicreach` within minutes
 
 ### Production setup
 
