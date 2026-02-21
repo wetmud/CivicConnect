@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Content Security Policy: only allow resources from trusted domains -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+    font-src https://fonts.gstatic.com;
+    img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
+    connect-src 'self' https://api.geoapify.com https://represent.opennorth.ca https://corsproxy.io https://api.anthropic.com;
+    frame-ancestors 'none';
+  "/>
+  <!-- No data collection, no tracking, no cookies -->
+  <meta name="referrer" content="no-referrer"/>
+  <title>CivicReach — Contact Your Local Government</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0c;
+      --surface: #161713;
+      --border: #2a2b27;
+      --accent: #c8f04a;
+      --accent-dim: #8aaa2a;
+      --text: #e8e9e2;
+      --text-muted: #7a7b72;
+      --danger: #ff6b4a;
+      --profile-bg: #131410;
+    }
+
+    :root.light {
+      --bg: #f7f7f2;
+      --surface: #ffffff;
+      --border: #d8d9d0;
+      --accent: #5a8a00;
+      --accent-dim: #7aaa20;
+      --text: #1a1b18;
+      --text-muted: #6a6b62;
+      --danger: #cc4422;
+      --profile-bg: #eeeee8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    header {
+      padding: 2rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .tagline {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .theme-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      transform: rotate(20deg);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 5rem 1.5rem 3rem;
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 600px;
+      margin-bottom: 3.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.2rem, 6vw, 3.8rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 em { font-style: italic; color: var(--accent); }
+
+    .hero p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .search-box {
+      width: 100%;
+      max-width: 560px;
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+
+    .autocomplete-wrapper { position: relative; }
+
+    .input-row {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      background: var(--surface);
+    }
+
+    .input-row:focus-within { border-color: var(--accent); }
+
+    #address-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 1rem 1.25rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      caret-color: var(--accent);
+    }
+
+    #address-input::placeholder { color: var(--text-muted); }
+
+    #search-btn {
+      background: var(--accent);
+      border: none;
+      padding: 0 1.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #0e0f0c;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #search-btn:hover { background: #d4f55a; }
+    #search-btn:active { transform: scale(0.97); }
+    #search-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+    .hint {
+      margin-top: 0.6rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1px solid var(--accent-dim);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 50;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .autocomplete-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: rgba(200, 240, 74, 0.08);
+      color: var(--accent);
+    }
+
+    /* ── Profile card ── */
+    #profile-card {
+      width: 100%;
+      max-width: 560px;
+      margin-top: 2rem;
+      background: var(--profile-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+      display: none;
+    }
+
+    .profile-info {
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .profile-address {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .profile-address-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .profile-ward-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .profile-ward-value {
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    #ward-map {
+      height: 200px;
+      width: 100%;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Leaflet container backgrounds */
+    :root:not(.light) .leaflet-container { background: #1a1c17; }
+    :root.light .leaflet-container { background: #e8e8e0; }
+
+    #results-container {
+      width: 100%;
+      max-width: 560px;
+      margin-top: 2.5rem;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.65rem 1.25rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .results-header {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rep-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+      animation: fadeUp 0.4s ease both;
+      transition: border-color 0.2s;
+    }
+
+    .rep-card:hover { border-color: var(--accent-dim); }
+
+    .rep-level {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+
+    .rep-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .rep-role {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.9rem;
+    }
+
+    .rep-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .services-section { margin-bottom: 1.75rem; }
+
+    .services-category-header {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      margin-bottom: 0.65rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .service-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.9rem 1.25rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeUp 0.3s ease both;
+      transition: border-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .service-card:hover { border-color: var(--accent-dim); }
+
+    .service-name {
+      font-size: 0.82rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .service-address {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+    }
+
+    .service-dist {
+      font-size: 0.68rem;
+      color: var(--accent);
+      white-space: nowrap;
+      margin-left: 1rem;
+      background: rgba(200, 240, 74, 0.08);
+      border: 1px solid rgba(200, 240, 74, 0.2);
+      padding: 0.2rem 0.55rem;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .btn-outline {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-primary:hover { background: var(--accent); color: #0e0f0c; }
+
+    .loading {
+      text-align: center;
+      padding: 3rem 0;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    .error-msg {
+      background: rgba(255,107,74,0.08);
+      border: 1px solid rgba(255,107,74,0.3);
+      color: var(--danger);
+      font-size: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      margin-bottom: 1rem;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal label {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .modal input, .modal textarea, .modal select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      outline: none;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
+    .modal textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+    .modal select option { background: var(--surface); }
+
+    .ai-generating {
+      font-size: 0.72rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ai-generating.visible { display: flex; }
+
+    .dot-pulse { display: flex; gap: 3px; }
+    .dot-pulse span {
+      width: 4px; height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 1.2s infinite;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      padding: 1.5rem 2.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    footer a { color: var(--text-muted); text-decoration: underline; }
+
+    .privacy-banner {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .privacy-banner .privacy-text { display: flex; align-items: center; gap: 0.5rem; }
+    .privacy-banner .privacy-icon { color: var(--accent); font-size: 0.8rem; }
+
+    .privacy-dismiss {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .privacy-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">CivicReach</span>
+  <div class="header-right">
+    <span class="tagline">Know who represents you 🍁</span>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+      <span class="theme-icon">☀️</span>
+    </button>
+  </div>
+</header>
+
+<!-- Privacy notice banner -->
+<div class="privacy-banner" id="privacy-banner">
+  <div class="privacy-text">
+    <span class="privacy-icon">🔒</span>
+    <span>CivicReach collects <strong>zero data</strong> about you. Addresses you search are never stored, logged, or shared. No cookies. No tracking. Everything happens in your browser and is gone when you leave.</span>
+  </div>
+  <button class="privacy-dismiss" onclick="dismissPrivacy()">Got it</button>
+</div>
+
+<main>
+  <div class="hero">
+    <h1>Your address.<br><em>Your voice.</em></h1>
+    <p>Enter your address to find your elected representatives and nearby government services — all in one place.</p>
+  </div>
+
+  <div class="search-box">
+    <div class="autocomplete-wrapper">
+      <div class="input-row">
+        <input
+          id="address-input"
+          type="text"
+          placeholder="e.g. 123 Main St, Burlington, ON"
+          autocomplete="off"
+        />
+        <button id="search-btn" onclick="findAll()">Find Reps →</button>
+      </div>
+      <div class="autocomplete-dropdown" id="autocomplete-dropdown" style="display:none;"></div>
+    </div>
+    <p class="hint">Start typing your Canadian address and select from suggestions.</p>
+  </div>
+
+  <div id="profile-card">
+    <div class="profile-info">
+      <div>
+        <div class="profile-address">Address</div>
+        <div class="profile-address-value" id="profile-address-text">—</div>
+        <div class="profile-ward-label">Ward / District</div>
+        <div class="profile-ward-value" id="profile-ward-text">—</div>
+      </div>
+    </div>
+    <div id="ward-map"></div>
+  </div>
+
+  <div id="results-container" style="display:none;">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
+      <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
+      <!-- FEDERAL TAB (saved for later): <button class="tab-btn" onclick="switchTab('federal', this)">Federal</button> -->
+    </div>
+    <div class="tab-panel active" id="tab-reps">
+      <div id="results-reps"></div>
+    </div>
+    <div class="tab-panel" id="tab-services">
+      <div id="results-services"></div>
+    </div>
+    <!-- FEDERAL PANEL (saved for later):
+    <div class="tab-panel" id="tab-federal"><div id="results-federal"></div></div> -->
+  </div>
+</main>
+
+<!-- Email Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Write to <span id="modal-rep-name">Your Rep</span></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <label>Your issue / topic</label>
+    <select id="issue-select">
+      <option value="">— Select a topic —</option>
+      <option value="pothole">Road / Pothole</option>
+      <option value="zoning">Zoning / Development</option>
+      <option value="noise">Noise Complaint</option>
+      <option value="transit">Public Transit</option>
+      <option value="safety">Public Safety</option>
+      <option value="environment">Environment / Green Space</option>
+      <option value="housing">Housing / Affordability</option>
+      <option value="other">Other</option>
+    </select>
+    <label>Briefly describe the issue <span style="color:var(--text-muted)">(optional — AI will draft from this)</span></label>
+    <input type="text" id="issue-detail" placeholder="e.g. large pothole on Maple Ave near the school" />
+    <div class="ai-generating" id="ai-status">
+      <div class="dot-pulse"><span></span><span></span><span></span></div>
+      Drafting your email...
+    </div>
+    <label>Subject</label>
+    <input type="text" id="email-subject" placeholder="Subject line" />
+    <label>Email body</label>
+    <textarea id="email-body" placeholder="Your email will appear here..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="generateEmail()">✦ AI Draft</button>
+      <button class="btn-primary" onclick="sendEmail()">Open in Mail →</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒 No data collected, ever
+</footer>
+
+<script>
+  // ── Privacy banner ───────────────────────────────────────
+  function dismissPrivacy() {
+    const banner = document.getElementById('privacy-banner');
+    banner.style.opacity = '0';
+    banner.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => banner.style.display = 'none', 300);
+  }
+
+  const GEOAPIFY_KEY = 'def29eda434347f6b7f2e0cdcbc47ce8';
+  const CORS_PROXY = 'https://corsproxy.io/?';
+
+  // ── Theme toggle ──────────────────────────────────────────
+  let isDark = true;
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.classList.toggle('light', !isDark);
+    document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
+    // Re-render map tiles and recolour ward layer when switching
+    if (wardMap) {
+      wardMap.eachLayer(l => { if (l.options && l.options.attribution) wardMap.removeLayer(l); });
+      addMapTiles();
+      if (wardLayer) {
+        const accentColor = isDark ? '#c8f04a' : '#5a8a00';
+        wardLayer.setStyle({ color: accentColor, fillColor: accentColor });
+      }
+    }
+  }
+
+  // ── Map ───────────────────────────────────────────────────
+  let wardMap = null;
+  let wardLayer = null;
+
+  function initMap(lat, lon) {
+    if (wardMap) {
+      wardMap.remove();
+      wardMap = null;
+      wardLayer = null;
+    }
+    wardMap = L.map('ward-map', { zoomControl: true, scrollWheelZoom: false });
+    addMapTiles();
+    wardMap.setView([lat, lon], 13);
+    // Pin for searched address
+    L.circleMarker([lat, lon], {
+      radius: 6,
+      fillColor: '#c8f04a',
+      color: '#0e0f0c',
+      weight: 2,
+      fillOpacity: 1
+    }).addTo(wardMap);
+  }
+
+  function addMapTiles() {
+    if (!wardMap) return;
+    const dark = !document.documentElement.classList.contains('light');
+    const tileUrl = dark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl, {
+      attribution: '© OpenStreetMap © CARTO',
+      maxZoom: 19
+    }).addTo(wardMap);
+  }
+
+  async function fetchWardBoundary(lat, lon) {
+    try {
+      // No sets= filter — let the API find whatever boundary contains this point
+      const url = `https://represent.opennorth.ca/boundaries/?contains=${lat},${lon}&format=json&limit=5`;
+      const res = await fetch(CORS_PROXY + encodeURIComponent(url));
+      const data = await res.json();
+      if (!data.objects?.length) return null;
+      // Prefer the most local boundary (ward/district over province/country)
+      const preferred = data.objects.sort((a, b) => {
+        const score = o => {
+          const n = (o.boundary_set_name || o.name || '').toLowerCase();
+          if (n.includes('ward') || n.includes('district') || n.includes('borough')) return 0;
+          if (n.includes('city') || n.includes('municipal')) return 1;
+          if (n.includes('county') || n.includes('region')) return 2;
+          return 3;
+        };
+        return score(a) - score(b);
+      });
+      const boundary = preferred[0];
+      // Fetch the actual GeoJSON shape
+      const shapeUrl = `https://represent.opennorth.ca${boundary.url}shape`;
+      const shapeRes = await fetch(CORS_PROXY + encodeURIComponent(shapeUrl));
+      const geoJson = await shapeRes.json();
+      return { name: boundary.name, geoJson };
+    } catch (e) {
+      console.warn('Ward boundary fetch failed', e);
+      return null;
+    }
+  }
+
+  let currentRep = null;
+  let selectedLat = null;
+  let selectedLon = null;
+  let autocompleteTimeout = null;
+  let activeIndex = -1;
+
+  const input = document.getElementById('address-input');
+  const dropdown = document.getElementById('autocomplete-dropdown');
+
+  // ── Autocomplete ──────────────────────────────────────────
+  input.addEventListener('input', () => {
+    clearTimeout(autocompleteTimeout);
+    const val = input.value.trim();
+    if (val.length < 3) { hideDropdown(); return; }
+    autocompleteTimeout = setTimeout(() => fetchSuggestions(val), 300);
+  });
+
+  input.addEventListener('keydown', e => {
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      updateActive(items);
+    } else if (e.key === 'ArrowUp') {
+      activeIndex = Math.max(activeIndex - 1, 0);
+      updateActive(items);
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].click();
+      else findAll();
+    } else if (e.key === 'Escape') { hideDropdown(); }
+  });
+
+  function updateActive(items) {
+    items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+  }
+
+  async function fetchSuggestions(text) {
+    try {
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const results = data.results || [];
+      if (!results.length) { hideDropdown(); return; }
+      showDropdown(results);
+    } catch { hideDropdown(); }
+  }
+
+  function showDropdown(results) {
+    activeIndex = -1;
+    dropdown.innerHTML = results.slice(0, 6).map(r => {
+      const label = r.formatted || r.address_line1 || 'Unknown';
+      return `<div class="autocomplete-item" data-lat="${r.lat}" data-lon="${r.lon}" data-label="${label.replace(/"/g, '&quot;')}">${label}</div>`;
+    }).join('');
+    dropdown.style.display = 'block';
+    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('click', () => {
+        input.value = el.dataset.label;
+        selectedLat = parseFloat(el.dataset.lat);
+        selectedLon = parseFloat(el.dataset.lon);
+        hideDropdown();
+        findAll();
+      });
+    });
+  }
+
+  function hideDropdown() {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrapper')) hideDropdown();
+  });
+
+  // ── Tab switching ─────────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Main search ───────────────────────────────────────────
+  async function findAll() {
+    const address = input.value.trim();
+    if (!address) return;
+
+    const btn = document.getElementById('search-btn');
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+    hideDropdown();
+
+    document.getElementById('results-container').style.display = 'block';
+    document.getElementById('results-reps').innerHTML = `<div class="loading"><div class="spinner"></div>Finding representatives...</div>`;
+    document.getElementById('results-services').innerHTML = `<div class="loading"><div class="spinner"></div>Finding nearby services...</div>`;
+
+    try {
+      let lat = selectedLat;
+      let lon = selectedLon;
+
+      if (!lat || !lon) {
+        const geoUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+        const geoRes = await fetch(geoUrl);
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) {
+          document.getElementById('results-reps').innerHTML = `<div class="error-msg">Address not found. Try selecting from the dropdown suggestions.</div>`;
+          document.getElementById('results-services').innerHTML = '';
+          return;
+        }
+        lat = geoData.results[0].lat;
+        lon = geoData.results[0].lon;
+      }
+
+      // ── Profile card ──
+      const profileCard = document.getElementById('profile-card');
+      profileCard.style.display = 'block';
+      document.getElementById('profile-address-text').textContent = address;
+      document.getElementById('profile-ward-text').textContent = 'Loading...';
+
+      // Init map immediately at coords
+      initMap(lat, lon);
+
+      // Fetch ward boundary in parallel with everything else
+      const [wardResult] = await Promise.all([
+        fetchWardBoundary(lat, lon),
+        fetchReps(lat, lon),
+        fetchServices(lat, lon)
+      ]);
+
+      if (wardResult) {
+        document.getElementById('profile-ward-text').textContent = wardResult.name;
+        // Draw boundary on map
+        if (wardLayer) wardMap.removeLayer(wardLayer);
+        const accentCol = document.documentElement.classList.contains('light') ? '#5a8a00' : '#c8f04a';
+        wardLayer = L.geoJSON(wardResult.geoJson, {
+          style: {
+            color: accentCol,
+            weight: 2.5,
+            fillColor: accentCol,
+            fillOpacity: 0.15,
+            dashArray: null
+          }
+        }).addTo(wardMap);
+        wardMap.fitBounds(wardLayer.getBounds(), { padding: [20, 20] });
+      } else {
+        document.getElementById('profile-ward-text').textContent = 'Ward boundary not available';
+      }
+
+    } catch (err) {
+      document.getElementById('results-reps').innerHTML = `<div class="error-msg">Something went wrong. Check your connection and try again.</div>`;
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Find Reps →';
+      selectedLat = null;
+      selectedLon = null;
+    }
+  }
+
+  // ── Government level sorter ───────────────────────────────
+  function govLevel(rep) {
+    const name = (rep.representative_set_name || '').toLowerCase();
+    const office = (rep.elected_office || '').toLowerCase();
+    if (name.includes('house of commons') || name.includes('senate') ||
+        office.includes('mp') || office === 'senator') return 10;
+    if (office.includes('premier') || office.includes('minister')) return 4;
+    if (name.includes('legislative assembly') || name.includes('national assembly') ||
+        office.includes('mpp') || office.includes('mla') || office.includes('mna')) return 3;
+    if (name.includes('region') || name.includes('county') || name.includes('district')) return 2;
+    if (office.includes('mayor')) return 0;
+    return 1;
+  }
+
+  function isFederal(rep) {
+    const name = (rep.representative_set_name || '').toLowerCase();
+    const office = (rep.elected_office || '').toLowerCase();
+    return name.includes('house of commons') || name.includes('senate of canada') ||
+           name.includes('sénat') || office === 'mp' || office === 'senator' ||
+           office.includes('member of parliament');
+  }
+
+  // ── Representatives ───────────────────────────────────────
+  async function fetchReps(lat, lon) {
+    try {
+      const repUrl = `https://represent.opennorth.ca/representatives/?point=${lat},${lon}&format=json`;
+      const repRes = await fetch(CORS_PROXY + encodeURIComponent(repUrl));
+      const repData = await repRes.json();
+
+      if (!repData.objects?.length) {
+        document.getElementById('results-reps').innerHTML = `<div class="error-msg">No representatives found for this address.</div>`;
+        return;
+      }
+
+      const sorted = repData.objects.sort((a, b) => govLevel(a) - govLevel(b));
+      renderRepList('results-reps', sorted, 'Local & Provincial');
+
+    } catch (err) {
+      document.getElementById('results-reps').innerHTML = `<div class="error-msg">Could not load representatives. Try again.</div>`;
+    }
+  }
+
+  /* FEDERAL (saved for later) — re-enable by splitting repData.objects with isFederal()
+     and calling renderRepList('results-federal', federal, 'Federal') */
+
+  function renderRepList(elId, reps, label) {
+    if (!reps.length) {
+      document.getElementById(elId).innerHTML = `<div class="error-msg">No ${label.toLowerCase()} representatives found.</div>`;
+      return;
+    }
+    let html = `<div class="results-header">${label} — ${reps.length} representative${reps.length !== 1 ? 's' : ''}</div>`;
+    reps.forEach((rep, i) => {
+      const email = rep.email || '';
+      html += `
+        <div class="rep-card" style="animation-delay:${i * 0.06}s">
+          <div class="rep-level">${rep.representative_set_name || 'Government'}</div>
+          <div class="rep-name">${rep.name}</div>
+          <div class="rep-role">${rep.elected_office}${rep.party_name ? ' · ' + rep.party_name : ''}</div>
+          <div class="rep-actions">
+            ${email ? `<button class="btn-primary" onclick='openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>✉ Write Email</button>` : ''}
+            ${rep.url ? `<a class="btn-outline" href="${rep.url}" target="_blank">↗ Profile</a>` : ''}
+            <button class="btn-outline" onclick="copyInfo('${rep.name}', '${email}')">Copy Info</button>
+          </div>
+        </div>`;
+    });
+    document.getElementById(elId).innerHTML = html;
+  }
+
+  // ── Haversine ─────────────────────────────────────────────
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Nearby Services ───────────────────────────────────────
+  const SERVICE_CATEGORIES = [
+    { label: 'Libraries', icon: '📚', categories: 'education.library',   radius: 10000 },
+    { label: 'Parks',     icon: '🌳', categories: 'leisure.park',        radius: 5000  },
+    { label: 'Hospitals', icon: '🏥', categories: 'healthcare.hospital', radius: 10000 },
+    { label: 'Schools',   icon: '🏫', categories: 'education.school',    radius: 5000  },
+  ];
+
+  async function fetchServices(lat, lon) {
+    const el = document.getElementById('results-services');
+    try {
+      const results = await Promise.all(
+        SERVICE_CATEGORIES.map(cat =>
+          fetch(`https://api.geoapify.com/v2/places?categories=${cat.categories}&filter=circle:${lon},${lat},${cat.radius}&limit=5&apiKey=${GEOAPIFY_KEY}`)
+            .then(r => r.json())
+            .then(data => {
+              const places = (data.features || []).filter(f => f.properties && f.properties.name);
+              places.sort((a, b) => {
+                const da = a.properties.distance != null ? a.properties.distance
+                  : (a.geometry?.coordinates ? haversine(lat, lon, a.geometry.coordinates[1], a.geometry.coordinates[0]) : Infinity);
+                const db = b.properties.distance != null ? b.properties.distance
+                  : (b.geometry?.coordinates ? haversine(lat, lon, b.geometry.coordinates[1], b.geometry.coordinates[0]) : Infinity);
+                return da - db;
+              });
+              return { ...cat, places };
+            })
+            .catch(() => ({ ...cat, places: [] }))
+        )
+      );
+
+      const hasAny = results.some(r => r.places.length > 0);
+      if (!hasAny) {
+        el.innerHTML = `<div class="error-msg">No nearby services found. Try a more specific address.</div>`;
+        return;
+      }
+
+      let html = '';
+      results.forEach(cat => {
+        if (!cat.places.length) return;
+        html += `<div class="services-section">
+          <div class="services-category-header"><span>${cat.icon}</span>${cat.label}</div>`;
+        cat.places.forEach((place, i) => {
+          const props = place.properties;
+          const placeLat = place.geometry?.coordinates[1];
+          const placeLon = place.geometry?.coordinates[0];
+          const name = props.name || 'Unnamed';
+          const addr = props.address_line2 || props.formatted || '';
+          const rawDist = props.distance != null ? props.distance
+            : (placeLat && placeLon ? haversine(lat, lon, placeLat, placeLon) : null);
+          const dist = rawDist !== null
+            ? rawDist < 1000 ? Math.round(rawDist) + 'm' : (rawDist / 1000).toFixed(1) + 'km'
+            : '';
+          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + addr)}`;
+          html += `
+            <a class="service-card" href="${mapsUrl}" target="_blank" style="animation-delay:${i * 0.05}s">
+              <div>
+                <div class="service-name">${name}</div>
+                <div class="service-address">${addr}</div>
+              </div>
+              ${dist ? `<div class="service-dist">${dist} away</div>` : ''}
+            </a>`;
+        });
+        html += `</div>`;
+      });
+
+      el.innerHTML = html;
+    } catch (err) {
+      el.innerHTML = `<div class="error-msg">Could not load nearby services. Try again.</div>`;
+      console.error(err);
+    }
+  }
+
+  // ── Email modal ───────────────────────────────────────────
+  function openModal(rep) {
+    currentRep = rep;
+    document.getElementById('modal-rep-name').textContent = rep.name;
+    document.getElementById('email-subject').value = '';
+    document.getElementById('email-body').value = '';
+    document.getElementById('issue-select').value = '';
+    document.getElementById('issue-detail').value = '';
+    document.getElementById('modal-backdrop').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-backdrop').classList.remove('open');
+  }
+
+  async function generateEmail() {
+    if (!currentRep) return;
+    const issue = document.getElementById('issue-select').value;
+    const detail = document.getElementById('issue-detail').value;
+    const aiStatus = document.getElementById('ai-status');
+    aiStatus.classList.add('visible');
+
+    const prompt = `Write a brief, polite, and clear email to a government representative named ${currentRep.name} (${currentRep.elected_office}).
+The constituent lives in the area represented by ${currentRep.representative_set_name}.
+Issue category: ${issue || 'general concern'}.
+Specific details: ${detail || 'Not provided'}.
+Write in first person. Keep it under 150 words. Include a clear subject line on the first line starting with "Subject: ".
+Do not include placeholders like [Your Name] — end with just "A Concerned Resident".`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const lines = text.split('\n');
+      const subjectLine = lines.find(l => l.startsWith('Subject:'));
+      const body = lines.filter(l => !l.startsWith('Subject:')).join('\n').trim();
+      if (subjectLine) document.getElementById('email-subject').value = subjectLine.replace('Subject:', '').trim();
+      document.getElementById('email-body').value = body;
+    } catch {
+      document.getElementById('email-body').value = `Dear ${currentRep.name},\n\nI am writing to bring your attention to a concern in our community regarding ${detail || issue || 'an important local issue'}.\n\nI would appreciate your attention to this matter and look forward to your response.\n\nSincerely,\nA Concerned Resident`;
+      document.getElementById('email-subject').value = `Community Concern — ${issue || 'Local Issue'}`;
+    } finally {
+      aiStatus.classList.remove('visible');
+    }
+  }
+
+  function sendEmail() {
+    if (!currentRep?.email) return alert('No email address available for this representative.');
+    const subject = encodeURIComponent(document.getElementById('email-subject').value);
+    const body = encodeURIComponent(document.getElementById('email-body').value);
+    window.open(`mailto:${currentRep.email}?subject=${subject}&body=${body}`);
+  }
+
+  function copyInfo(name, email) {
+    const text = `${name}${email ? ' — ' + email : ''}`;
+    navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+  }
+
+  document.getElementById('modal-backdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-backdrop')) closeModal();
+  });
+</script>
+
+</body>
+</html>
