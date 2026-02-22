@@ -1283,6 +1283,7 @@
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'budget') initBudgetTab();
   }
 
   // ── Main search ───────────────────────────────────────────
@@ -1752,13 +1753,6 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
     btn.classList.add('active');
     document.getElementById('budget-view-breakdown').style.display = view === 'breakdown' ? 'block' : 'none';
     document.getElementById('budget-view-recommend').style.display = view === 'recommend' ? 'block' : 'none';
-  }
-
-  // Hook into switchTab to init budget on first open
-  const _origSwitchTab = switchTab;
-  function switchTab(name, btn) {
-    _origSwitchTab(name, btn);
-    if (name === 'budget') initBudgetTab();
   }
 
   // ── Budget recommendation email ───────────────────────────
