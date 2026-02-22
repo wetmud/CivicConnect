@@ -693,6 +693,232 @@
     }
 
     .privacy-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Budget tab ── */
+    .budget-intro {
+      margin-bottom: 1.25rem;
+    }
+
+    .budget-intro p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+
+    .budget-sub-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+
+    .budget-sub-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .budget-sub-btn:hover { color: var(--text); }
+    .budget-sub-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .budget-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .budget-total strong { color: var(--accent); }
+
+    /* Budget category cards */
+    .budget-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .budget-card:hover { border-color: var(--accent-dim); }
+
+    .budget-card-btn {
+      width: 100%;
+      background: var(--surface);
+      border: none;
+      padding: 0.95rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+      gap: 1rem;
+    }
+
+    .budget-card-btn:hover { background: rgba(200,240,74,0.04); }
+    .budget-card-btn.open { background: rgba(200,240,74,0.06); }
+
+    .budget-card-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .budget-card-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    .budget-card-label {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .budget-card-amount {
+      font-size: 0.7rem;
+      color: var(--accent);
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .budget-card-chevron {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .budget-card-btn.open .budget-card-chevron { transform: rotate(180deg); }
+
+    /* Expanded bubble */
+    .budget-bubble {
+      display: none;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 1.4rem;
+      animation: fadeUp 0.2s ease;
+    }
+
+    .budget-bubble.open { display: block; }
+
+    .bubble-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
+    .bubble-tldr {
+      font-size: 0.82rem;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bubble-tldr strong {
+      color: var(--accent);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .bubble-breakdown {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+    }
+
+    .bubble-breakdown strong {
+      color: var(--text);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .bubble-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.68rem;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--accent-dim);
+      padding: 0.25rem 0.7rem;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+
+    .bubble-source:hover { background: rgba(200,240,74,0.08); }
+
+    /* Recommend box */
+    .recommend-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.4rem;
+    }
+
+    .recommend-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .recommend-desc {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.1rem;
+    }
+
+    .recommend-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    #rec-email-preview label {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      .budget-card-btn { padding: 0.8rem 1rem; }
+      .budget-meta { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+    }
+
   </style>
 </head>
 <body>
@@ -755,6 +981,7 @@
       <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
       <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
       <!-- FEDERAL TAB (saved for later): <button class="tab-btn" onclick="switchTab('federal', this)">Federal</button> -->
+      <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button>
     </div>
     <div class="tab-panel active" id="tab-reps">
       <div id="results-reps"></div>
@@ -764,6 +991,61 @@
     </div>
     <!-- FEDERAL PANEL (saved for later):
     <div class="tab-panel" id="tab-federal"><div id="results-federal"></div></div> -->
+
+    <div class="tab-panel" id="tab-budget">
+      <div id="budget-content">
+        <div class="budget-intro">
+          <p>Burlington's public budget — summarized in plain language. Click any category to expand it.</p>
+          <div class="budget-sub-tabs">
+            <button class="budget-sub-btn active" onclick="switchBudgetView('breakdown', this)">Budget Breakdown</button>
+            <button class="budget-sub-btn" onclick="switchBudgetView('recommend', this)">Recommend Update</button>
+          </div>
+        </div>
+
+        <div id="budget-view-breakdown">
+          <div class="budget-meta">
+            <span>📅 2025 Approved · 2026 Proposed</span>
+            <span class="budget-total">Net Tax Levy: <strong>$264.7M</strong></span>
+          </div>
+          <div id="budget-cards"></div>
+        </div>
+
+        <div id="budget-view-recommend" style="display:none;">
+          <div class="recommend-box">
+            <div class="recommend-title">📣 Recommend a Budget Update</div>
+            <p class="recommend-desc">Have a service that needs more funding? Something being cut that matters to you? Send your recommendation directly to Burlington City Council.</p>
+            <label>Budget category</label>
+            <select id="rec-category">
+              <option value="">— Select a category —</option>
+              <option>Roads & Infrastructure</option>
+              <option>Parks & Recreation</option>
+              <option>Transit</option>
+              <option>Emergency Services</option>
+              <option>Housing & Affordability</option>
+              <option>Environment & Climate</option>
+              <option>Community Services</option>
+              <option>Other</option>
+            </select>
+            <label>Your recommendation</label>
+            <textarea id="rec-detail" placeholder="e.g. The sidewalk on Appleby Line near the school has been broken for two years and needs urgent repair..."></textarea>
+            <div class="recommend-actions">
+              <button class="btn-outline" onclick="draftBudgetEmail()">✦ AI Draft Email</button>
+              <button class="btn-primary" onclick="sendBudgetEmail()">Send to Council →</button>
+            </div>
+            <div class="ai-generating" id="rec-ai-status">
+              <div class="dot-pulse"><span></span><span></span><span></span></div>
+              Drafting your recommendation...
+            </div>
+            <div id="rec-email-preview" style="display:none;">
+              <label>Subject</label>
+              <input type="text" id="rec-subject"/>
+              <label>Email</label>
+              <textarea id="rec-body"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -1300,6 +1582,234 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
   document.getElementById('modal-backdrop').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-backdrop')) closeModal();
   });
+
+  // ── Budget Tab ────────────────────────────────────────────
+
+  const BUDGET_SOURCES = {
+    overview: 'https://www.burlington.ca/en/council-and-city-administration/resources/Budget-and-Finances/Proposed-Budget-Book/2025/Proposed-Budget-Book/2025-Proposed-Budget-Book-01-Budget-Summary.pdf',
+    operating: 'https://www.burlington.ca/en/council-and-city-administration/resources/Budget-and-Finances/Approved-Budget-Book/2025/2025-Approved-Budget-Book-02-Operating-Details.pdf',
+    approved: 'https://www.burlington.ca/en/council-and-city-administration/approved-budget-book.aspx',
+    getinvolved: 'https://www.getinvolvedburlington.ca/2025budget'
+  };
+
+  const BUDGET_CATEGORIES = [
+    {
+      icon: '🏗️',
+      label: 'Roads & Infrastructure',
+      amount: '$6.3M capital',
+      source: BUDGET_SOURCES.operating,
+      context: `Burlington 2025 Budget — Roads & Infrastructure: $6.3M allocated for Plains Road renewal to decrease traffic congestion. 2% dedicated infrastructure renewal levy generating $4.86M for aging asset replacement. Overall capital budget $103.5M across all wards. Asset Management Financing Plan targets long-term renewal of city assets. 2025 saw significant pressure from July flooding event.`
+    },
+    {
+      icon: '🌳',
+      label: 'Parks & Recreation',
+      amount: '$12M capital',
+      source: BUDGET_SOURCES.operating,
+      context: `Burlington 2025 Budget — Parks & Recreation: $12M to renew City parks including City View Park. $10M for repair and renewal of City facilities. New washroom hours added at Spencer Smith Park (+$15,000 council amendment). Robert Bateman Community Centre and Skyway Arena now fully operational adding annualized costs. Urban forestry improvements funded through internal reallocation of $112,000.`
+    },
+    {
+      icon: '🚌',
+      label: 'Transit',
+      amount: '$7.8M capital',
+      source: BUDGET_SOURCES.operating,
+      context: `Burlington 2025 Budget — Transit: $7.8M for Burlington Transit Operations Facility expansion to increase transit efficiencies. Key investment in expanded transit service as part of livability principles. Burlington's population expected to grow 40% over 25 years requiring expanded transit infrastructure. Transit funded through 51% city portion of property tax bill.`
+    },
+    {
+      icon: '🚒',
+      label: 'Emergency Services',
+      amount: 'Operating budget',
+      source: BUDGET_SOURCES.operating,
+      context: `Burlington 2025 Budget — Emergency Services: Fire safety listed as key investment area. 33% of property tax bill goes to Halton Region which funds Halton Regional Police Service. City portion funds fire services. Automated Speed Enforcement program fully offset by fine revenues ($842,000). Bylaw compliance improvements included as key investment.`
+    },
+    {
+      icon: '🌊',
+      label: 'Environment & Flood Protection',
+      amount: '$5.2M capital',
+      source: BUDGET_SOURCES.approved,
+      context: `Burlington 2025 Budget — Environment: $5.2M for Stormwater Management to reduce flood risk in high-priority areas. Green infrastructure projects funded as key investment. Low-income property tax relief program included. July 2024 flooding tested city resilience and directly influenced 2025 budget priorities. Climate adaptation listed as core sustainability principle.`
+    },
+    {
+      icon: '🏠',
+      label: 'Housing & Affordability',
+      amount: 'Low-income relief',
+      source: BUDGET_SOURCES.getinvolved,
+      context: `Burlington 2025 Budget — Housing & Affordability: Low-income property tax relief program funded. Fee subsidies included to ensure income is not a barrier to participation. Burlington property taxes as percentage of household income are third lowest among municipal comparators. City population expected to grow 40%+ requiring long-term affordable housing planning. Development charges fund capital growth projects.`
+    },
+    {
+      icon: '📚',
+      label: 'Library & Community Services',
+      amount: '+$293,792',
+      source: BUDGET_SOURCES.overview,
+      context: `Burlington 2025 Budget — Community Services: 1.75% base budget increase for local boards. Key investment to increase Burlington Public Library contribution. Burlington Performing Arts Centre (BPAC) and Burlington Economic Development and Tourism also funded through local boards. 74.5% of residents surveyed satisfied with city services. 4,500+ resident engagements during 2025 budget process.`
+    },
+    {
+      icon: '💰',
+      label: 'Overall Tax Summary',
+      amount: '5.82% increase',
+      source: BUDGET_SOURCES.approved,
+      context: `Burlington 2025 Budget — Overall: Net tax levy $264,723,845. Overall property tax increase 5.82% (city 7.51% + Region of Halton 6% + Education unchanged). $52.91 increase per $100,000 of assessed property value. Property tax breakdown: 51% City of Burlington (transit, roads, parks, public safety), 33% Halton Region (police, waste, water, public health), 16% Boards of Education. 2026 proposed budget includes 5.80% city increase, 4.49% overall.`
+    }
+  ];
+
+  let budgetInitialized = false;
+
+  function initBudgetTab() {
+    if (budgetInitialized) return;
+    budgetInitialized = true;
+    const container = document.getElementById('budget-cards');
+    container.innerHTML = BUDGET_CATEGORIES.map((cat, i) => `
+      <div class="budget-card" style="animation-delay:${i * 0.05}s">
+        <button class="budget-card-btn" onclick="toggleBudgetCard(this, ${i})">
+          <div class="budget-card-left">
+            <span class="budget-card-icon">${cat.icon}</span>
+            <span class="budget-card-label">${cat.label}</span>
+          </div>
+          <span class="budget-card-amount">${cat.amount}</span>
+          <span class="budget-card-chevron">▼</span>
+        </button>
+        <div class="budget-bubble" id="bubble-${i}">
+          <div class="bubble-loading">
+            <div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>
+            Summarizing...
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const budgetSummaryCache = {};
+
+  async function toggleBudgetCard(btn, idx) {
+    const bubble = document.getElementById('bubble-' + idx);
+    const isOpen = bubble.classList.contains('open');
+
+    // Close all
+    document.querySelectorAll('.budget-card-btn').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.budget-bubble').forEach(b => b.classList.remove('open'));
+
+    if (isOpen) return; // toggle off
+
+    btn.classList.add('open');
+    bubble.classList.add('open');
+
+    if (budgetSummaryCache[idx]) return; // already loaded
+
+    const cat = BUDGET_CATEGORIES[idx];
+
+    try {
+      const prompt = `You are summarizing a section of Burlington, Ontario's 2025 municipal budget for a regular resident.
+
+Budget section: ${cat.label}
+Source data: ${cat.context}
+
+Respond ONLY in this exact JSON format (no markdown, no extra text):
+{
+  "tldr": "One or two plain-language sentences a resident would actually understand. Focus on what this means for them.",
+  "breakdown": "3-5 bullet points of the most important specifics, each on its own line starting with •"
+}`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.content?.[0]?.text || '';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      budgetSummaryCache[idx] = parsed;
+      renderBubble(idx, parsed, cat.source);
+
+    } catch (e) {
+      // Fallback — show raw context nicely
+      budgetSummaryCache[idx] = { tldr: cat.context.split('.')[0] + '.', breakdown: cat.context };
+      renderBubble(idx, budgetSummaryCache[idx], cat.source);
+    }
+  }
+
+  function renderBubble(idx, parsed, sourceUrl) {
+    const bubble = document.getElementById('bubble-' + idx);
+    bubble.innerHTML = `
+      <div class="bubble-tldr">
+        <strong>TL;DR</strong>
+        ${parsed.tldr}
+      </div>
+      <div class="bubble-breakdown">
+        <strong>Full Breakdown</strong>
+        ${parsed.breakdown}
+      </div>
+      <a class="bubble-source" href="${sourceUrl}" target="_blank">↗ View Source Document</a>
+    `;
+  }
+
+  function switchBudgetView(view, btn) {
+    document.querySelectorAll('.budget-sub-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('budget-view-breakdown').style.display = view === 'breakdown' ? 'block' : 'none';
+    document.getElementById('budget-view-recommend').style.display = view === 'recommend' ? 'block' : 'none';
+  }
+
+  // Hook into switchTab to init budget on first open
+  const _origSwitchTab = switchTab;
+  function switchTab(name, btn) {
+    _origSwitchTab(name, btn);
+    if (name === 'budget') initBudgetTab();
+  }
+
+  // ── Budget recommendation email ───────────────────────────
+  async function draftBudgetEmail() {
+    const category = document.getElementById('rec-category').value;
+    const detail = document.getElementById('rec-detail').value;
+    const status = document.getElementById('rec-ai-status');
+    const preview = document.getElementById('rec-email-preview');
+    if (!detail.trim()) { alert('Please describe your recommendation first.'); return; }
+
+    status.classList.add('visible');
+    preview.style.display = 'none';
+
+    const prompt = `Write a short, clear, polite email to Burlington City Council recommending a budget update.
+Category: ${category || 'General'}
+Resident's concern: ${detail}
+Keep it under 120 words. Start with "Subject: " on the first line. End with "A Burlington Resident".`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const lines = text.split('\n');
+      const subjectLine = lines.find(l => l.startsWith('Subject:'));
+      const body = lines.filter(l => !l.startsWith('Subject:')).join('\n').trim();
+      document.getElementById('rec-subject').value = subjectLine ? subjectLine.replace('Subject:', '').trim() : 'Budget Recommendation';
+      document.getElementById('rec-body').value = body;
+    } catch {
+      document.getElementById('rec-subject').value = `Budget Recommendation — ${category || 'General'}`;
+      document.getElementById('rec-body').value = `Dear Burlington City Council,\n\nI am writing to recommend a budget update regarding ${detail}.\n\nI hope this can be considered in the next budget cycle.\n\nA Burlington Resident`;
+    } finally {
+      status.classList.remove('visible');
+      preview.style.display = 'block';
+    }
+  }
+
+  function sendBudgetEmail() {
+    const subject = encodeURIComponent(document.getElementById('rec-subject').value || 'Budget Recommendation');
+    const body = encodeURIComponent(document.getElementById('rec-body').value || '');
+    // Burlington City Council general contact
+    window.open('mailto:clerk@burlington.ca?subject=' + subject + '&body=' + body);
+  }
+
 </script>
 
 </body>
