@@ -736,12 +736,49 @@
       align-items: center;
       font-size: 0.68rem;
       color: var(--text-muted);
-      margin-bottom: 1rem;
+      margin-bottom: 0.6rem;
       padding-bottom: 0.6rem;
       border-bottom: 1px solid var(--border);
     }
 
+    .budget-levy-row {
+      margin-bottom: 1rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      min-height: 1rem;
+    }
+
     .budget-total strong { color: var(--accent); }
+
+    .year-toggle {
+      display: flex;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .year-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .year-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+
+    .year-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0e0f0c;
+      font-weight: 600;
+    }
+
+    :root.light .year-btn.active { color: #fff; }
 
     /* Budget category cards */
     .budget-card {
@@ -1038,10 +1075,2180 @@
     <div class="tab-panel" id="tab-budget">
       <div class="budget-meta">
         <span id="budget-city-label">📅 City Budget</span>
+        <div class="year-toggle">
+          <button class="year-btn active" data-year="2025" onclick="switchBudgetYear(2025)">2025</button>
+          <button class="year-btn" data-year="2026" onclick="switchBudgetYear(2026)">2026</button>
+        </div>
+      </div>
+      <div class="budget-levy-row">
         <span class="budget-total" id="budget-levy-label"></span>
       </div>
       <div id="budget-cards">
-        <div class="loading"><div class="spinner"></div>Loading budget data...</div>
+        <div class="loading"><div class="spinner"></div>Search an address to load budget data...</div>
+      </div>
+      <div class="budget-footer">
+        <a class="budget-footer-link" href="https://github.com/wetmud/CivicConnect/issues/new?template=city-request.md&title=Something+wrong+with+budget+data&body=**What+needs+updating:**%0A%0A**City+searched:**%0A%0A**Details:**" target="_blank">Something wrong? Recommend an update ↗</a>
+      </div>
+    </div>
+    <!-- FEDERAL PANEL (saved for later):
+    <div class="tab-panel" id="tab-federal"><div id="results-federal"></div></div> -->
+
+  </div>
+</main>
+
+<!-- Email Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Write to <span id="modal-rep-name">Your Rep</span></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <label>Your issue / topic</label>
+    <select id="issue-select">
+      <option value="">— Select a topic —</option>
+      <option value="pothole">Road / Pothole</option>
+      <option value="zoning">Zoning / Development</option>
+      <option value="noise">Noise Complaint</option>
+      <option value="transit">Public Transit</option>
+      <option value="safety">Public Safety</option>
+      <option value="environment">Environment / Green Space</option>
+      <option value="housing">Housing / Affordability</option>
+      <option value="other">Other</option>
+    </select>
+    <label>Briefly describe the issue <span style="color:var(--text-muted)">(optional — AI will draft from this)</span></label>
+    <input type="text" id="issue-detail" placeholder="e.g. large pothole on Maple Ave near the school" />
+    <div class="ai-generating" id="ai-status">
+      <div class="dot-pulse"><span></span><span></span><span></span></div>
+      Drafting your email...
+    </div>
+    <label>Subject</label>
+    <input type="text" id="email-subject" placeholder="Subject line" />
+    <label>Email body</label>
+    <textarea id="email-body" placeholder="Your email will appear here..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="generateEmail()">✦ AI Draft</button>
+      <button class="btn-primary" onclick="sendEmail()">Open in Mail →</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒 No data collected, ever
+</footer>
+
+<script>
+  // ── Privacy banner ───────────────────────────────────────
+  function dismissPrivacy() {
+    const banner = document.getElementById('privacy-banner');
+    banner.style.opacity = '0';
+    banner.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => banner.style.display = 'none', 300);
+  }
+
+  const GEOAPIFY_KEY = 'def29eda434347f6b7f2e0cdcbc47ce8';
+  const CORS_PROXY = 'https://corsproxy.io/?';
+
+  // ── Theme toggle ──────────────────────────────────────────
+  let isDark = true;
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.classList.toggle('light', !isDark);
+    document.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
+    // Re-render map tiles and recolour ward layer when switching
+    if (wardMap) {
+      wardMap.eachLayer(l => { if (l.options && l.options.attribution) wardMap.removeLayer(l); });
+      addMapTiles();
+      if (wardLayer) {
+        const accentColor = isDark ? '#c8f04a' : '#5a8a00';
+        wardLayer.setStyle({ color: accentColor, fillColor: accentColor });
+      }
+    }
+  }
+
+  // ── Map ───────────────────────────────────────────────────
+  let wardMap = null;
+  let wardLayer = null;
+
+  function initMap(lat, lon) {
+    if (wardMap) {
+      wardMap.remove();
+      wardMap = null;
+      wardLayer = null;
+    }
+    wardMap = L.map('ward-map', { zoomControl: true, scrollWheelZoom: false });
+    addMapTiles();
+    wardMap.setView([lat, lon], 13);
+    // Pin for searched address
+    L.circleMarker([lat, lon], {
+      radius: 6,
+      fillColor: '#c8f04a',
+      color: '#0e0f0c',
+      weight: 2,
+      fillOpacity: 1
+    }).addTo(wardMap);
+  }
+
+  function addMapTiles() {
+    if (!wardMap) return;
+    const dark = !document.documentElement.classList.contains('light');
+    const tileUrl = dark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl, {
+      attribution: '© OpenStreetMap © CARTO',
+      maxZoom: 19
+    }).addTo(wardMap);
+  }
+
+  async function fetchWardBoundary(lat, lon) {
+    try {
+      // Fetch up to 10 boundaries and pick the most ward-like one
+      const url = `https://represent.opennorth.ca/boundaries/?contains=${lat},${lon}&format=json&limit=10`;
+      const res = await fetch(CORS_PROXY + encodeURIComponent(url));
+      const data = await res.json();
+      if (!data.objects?.length) return null;
+
+      // Score each boundary — lower is better (more local/ward-like)
+      const score = o => {
+        const setName = (o.boundary_set_name || '').toLowerCase();
+        const name    = (o.name || '').toLowerCase();
+        const combined = setName + ' ' + name;
+
+        // Explicitly reject whole-city, province, country boundaries
+        if (combined.includes('province') || combined.includes('provincial') ||
+            combined.includes('country') || combined.includes('federal') ||
+            combined.includes('canada')) return 99;
+
+        // Prefer specific ward/district/riding boundaries
+        if (combined.includes('ward'))     return 0;
+        if (combined.includes('riding'))   return 1;
+        if (combined.includes('district')) return 2;
+        if (combined.includes('borough'))  return 3;
+        if (combined.includes('division')) return 4;
+
+        // Penalise anything that sounds like a whole-city or regional boundary
+        if (combined.includes('municipality') || combined.includes('municipal')) return 20;
+        if (combined.includes('city of') || setName === name)                    return 25;
+        if (combined.includes('county') || combined.includes('region'))          return 30;
+
+        return 10; // unknown — middle ground
+      };
+
+      const sorted = [...data.objects].sort((a, b) => score(a) - score(b));
+
+      // If the best match is still a rejected boundary type, bail out
+      if (score(sorted[0]) >= 99) return null;
+
+      const boundary = sorted[0];
+      // Fetch the actual GeoJSON shape
+      const shapeUrl = `https://represent.opennorth.ca${boundary.url}shape`;
+      const shapeRes = await fetch(CORS_PROXY + encodeURIComponent(shapeUrl));
+      const geoJson = await shapeRes.json();
+      return { name: boundary.name, geoJson };
+    } catch (e) {
+      console.warn('Ward boundary fetch failed', e);
+      return null;
+    }
+  }
+
+  let currentRep = null;
+  let selectedLat = null;
+  let selectedLon = null;
+  let autocompleteTimeout = null;
+  let activeIndex = -1;
+
+  const input = document.getElementById('address-input');
+  const dropdown = document.getElementById('autocomplete-dropdown');
+
+  // ── Autocomplete ──────────────────────────────────────────
+  input.addEventListener('input', () => {
+    clearTimeout(autocompleteTimeout);
+    const val = input.value.trim();
+    if (val.length < 3) { hideDropdown(); return; }
+    autocompleteTimeout = setTimeout(() => fetchSuggestions(val), 300);
+  });
+
+  input.addEventListener('keydown', e => {
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      updateActive(items);
+    } else if (e.key === 'ArrowUp') {
+      activeIndex = Math.max(activeIndex - 1, 0);
+      updateActive(items);
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].click();
+      else findAll();
+    } else if (e.key === 'Escape') { hideDropdown(); }
+  });
+
+  function updateActive(items) {
+    items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+  }
+
+  async function fetchSuggestions(text) {
+    try {
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const results = data.results || [];
+      if (!results.length) { hideDropdown(); return; }
+      showDropdown(results);
+    } catch { hideDropdown(); }
+  }
+
+  function showDropdown(results) {
+    activeIndex = -1;
+    dropdown.innerHTML = results.slice(0, 6).map(r => {
+      const label = r.formatted || r.address_line1 || 'Unknown';
+      return `<div class="autocomplete-item" data-lat="${r.lat}" data-lon="${r.lon}" data-label="${label.replace(/"/g, '&quot;')}">${label}</div>`;
+    }).join('');
+    dropdown.style.display = 'block';
+    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('click', () => {
+        input.value = el.dataset.label;
+        selectedLat = parseFloat(el.dataset.lat);
+        selectedLon = parseFloat(el.dataset.lon);
+        hideDropdown();
+        findAll();
+      });
+    });
+  }
+
+  function hideDropdown() {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrapper')) hideDropdown();
+  });
+
+  // ── Tab switching ─────────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Main search ───────────────────────────────────────────
+  async function findAll() {
+    const address = input.value.trim();
+    if (!address) return;
+
+    const btn = document.getElementById('search-btn');
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+    hideDropdown();
+
+    document.getElementById('results-container').style.display = 'block';
+    document.getElementById('results-reps').innerHTML = `<div class="loading"><div class="spinner"></div>Finding representatives...</div>`;
+    document.getElementById('results-services').innerHTML = `<div class="loading"><div class="spinner"></div>Finding nearby services...</div>`;
+
+    try {
+      let lat = selectedLat;
+      let lon = selectedLon;
+
+      if (!lat || !lon) {
+        const geoUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+        const geoRes = await fetch(geoUrl);
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) {
+          document.getElementById('results-reps').innerHTML = `<div class="error-msg">Address not found. Try selecting from the dropdown suggestions.</div>`;
+          document.getElementById('results-services').innerHTML = '';
+          return;
+        }
+        lat = geoData.results[0].lat;
+        lon = geoData.results[0].lon;
+      }
+
+      // ── Profile card ──
+      const profileCard = document.getElementById('profile-card');
+      profileCard.style.display = 'block';
+      document.getElementById('profile-address-text').textContent = address;
+      document.getElementById('profile-ward-text').textContent = 'Loading...';
+
+      // Init map immediately at coords
+      initMap(lat, lon);
+
+      // Init budget with searched address
+      initBudgetTab(address);
+
+      // Fetch ward boundary in parallel with everything else
+      const [wardResult] = await Promise.all([
+        fetchWardBoundary(lat, lon),
+        fetchReps(lat, lon),
+        fetchServices(lat, lon)
+      ]);
+
+      if (wardResult) {
+        document.getElementById('profile-ward-text').textContent = wardResult.name;
+        // Draw boundary on map
+        if (wardLayer) wardMap.removeLayer(wardLayer);
+        const accentCol = document.documentElement.classList.contains('light') ? '#5a8a00' : '#c8f04a';
+        wardLayer = L.geoJSON(wardResult.geoJson, {
+          style: {
+            color: accentCol,
+            weight: 2.5,
+            fillColor: accentCol,
+            fillOpacity: 0.15,
+            dashArray: null
+          }
+        }).addTo(wardMap);
+        wardMap.fitBounds(wardLayer.getBounds(), { padding: [20, 20] });
+      } else {
+        document.getElementById('profile-ward-text').textContent = 'Ward boundary not available';
+      }
+
+    } catch (err) {
+      document.getElementById('results-reps').innerHTML = `<div class="error-msg">Something went wrong. Check your connection and try again.</div>`;
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Find Reps →';
+      selectedLat = null;
+      selectedLon = null;
+    }
+  }
+
+  // ── Government level sorter ───────────────────────────────
+  function govLevel(rep) {
+    const name = (rep.representative_set_name || '').toLowerCase();
+    const office = (rep.elected_office || '').toLowerCase();
+    if (name.includes('house of commons') || name.includes('senate') ||
+        office.includes('mp') || office === 'senator') return 10;
+    if (office.includes('premier') || office.includes('minister')) return 4;
+    if (name.includes('legislative assembly') || name.includes('national assembly') ||
+        office.includes('mpp') || office.includes('mla') || office.includes('mna')) return 3;
+    if (name.includes('region') || name.includes('county') || name.includes('district')) return 2;
+    if (office.includes('mayor')) return 0;
+    return 1;
+  }
+
+  function isFederal(rep) {
+    const name = (rep.representative_set_name || '').toLowerCase();
+    const office = (rep.elected_office || '').toLowerCase();
+    return name.includes('house of commons') || name.includes('senate of canada') ||
+           name.includes('sénat') || office === 'mp' || office === 'senator' ||
+           office.includes('member of parliament');
+  }
+
+  // ── Representatives ───────────────────────────────────────
+  async function fetchReps(lat, lon) {
+    try {
+      const repUrl = `https://represent.opennorth.ca/representatives/?point=${lat},${lon}&format=json`;
+      const repRes = await fetch(CORS_PROXY + encodeURIComponent(repUrl));
+      const repData = await repRes.json();
+
+      if (!repData.objects?.length) {
+        document.getElementById('results-reps').innerHTML = `<div class="error-msg">No representatives found for this address.</div>`;
+        return;
+      }
+
+      const sorted = repData.objects.sort((a, b) => govLevel(a) - govLevel(b));
+      renderRepList('results-reps', sorted, 'Local & Provincial');
+
+    } catch (err) {
+      document.getElementById('results-reps').innerHTML = `<div class="error-msg">Could not load representatives. Try again.</div>`;
+    }
+  }
+
+  /* FEDERAL (saved for later) — re-enable by splitting repData.objects with isFederal()
+     and calling renderRepList('results-federal', federal, 'Federal') */
+
+  function renderRepList(elId, reps, label) {
+    if (!reps.length) {
+      document.getElementById(elId).innerHTML = `<div class="error-msg">No ${label.toLowerCase()} representatives found.</div>`;
+      return;
+    }
+    let html = `<div class="results-header">${label} — ${reps.length} representative${reps.length !== 1 ? 's' : ''}</div>`;
+    reps.forEach((rep, i) => {
+      const email = rep.email || '';
+      html += `
+        <div class="rep-card" style="animation-delay:${i * 0.06}s">
+          <div class="rep-level">${rep.representative_set_name || 'Government'}</div>
+          <div class="rep-name">${rep.name}</div>
+          <div class="rep-role">${rep.elected_office}${rep.party_name ? ' · ' + rep.party_name : ''}</div>
+          <div class="rep-actions">
+            ${email ? `<button class="btn-primary" onclick='openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>✉ Write Email</button>` : ''}
+            ${rep.url ? `<a class="btn-outline" href="${rep.url}" target="_blank">↗ Profile</a>` : ''}
+            <button class="btn-outline" onclick="copyInfo('${rep.name}', '${email}')">Copy Info</button>
+          </div>
+        </div>`;
+    });
+    document.getElementById(elId).innerHTML = html;
+  }
+
+  // ── Haversine ─────────────────────────────────────────────
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Nearby Services ───────────────────────────────────────
+  const SERVICE_CATEGORIES = [
+    { label: 'Libraries', icon: '📚', categories: 'education.library',   radius: 10000 },
+    { label: 'Parks',     icon: '🌳', categories: 'leisure.park',        radius: 5000  },
+    { label: 'Hospitals', icon: '🏥', categories: 'healthcare.hospital', radius: 10000 },
+    { label: 'Schools',   icon: '🏫', categories: 'education.school',    radius: 5000  },
+  ];
+
+  async function fetchServices(lat, lon) {
+    const el = document.getElementById('results-services');
+    try {
+      const results = await Promise.all(
+        SERVICE_CATEGORIES.map(cat =>
+          fetch(`https://api.geoapify.com/v2/places?categories=${cat.categories}&filter=circle:${lon},${lat},${cat.radius}&limit=5&apiKey=${GEOAPIFY_KEY}`)
+            .then(r => r.json())
+            .then(data => {
+              const places = (data.features || []).filter(f => f.properties && f.properties.name);
+              places.sort((a, b) => {
+                const da = a.properties.distance != null ? a.properties.distance
+                  : (a.geometry?.coordinates ? haversine(lat, lon, a.geometry.coordinates[1], a.geometry.coordinates[0]) : Infinity);
+                const db = b.properties.distance != null ? b.properties.distance
+                  : (b.geometry?.coordinates ? haversine(lat, lon, b.geometry.coordinates[1], b.geometry.coordinates[0]) : Infinity);
+                return da - db;
+              });
+              return { ...cat, places };
+            })
+            .catch(() => ({ ...cat, places: [] }))
+        )
+      );
+
+      const hasAny = results.some(r => r.places.length > 0);
+      if (!hasAny) {
+        el.innerHTML = `<div class="error-msg">No nearby services found. Try a more specific address.</div>`;
+        return;
+      }
+
+      let html = '';
+      results.forEach(cat => {
+        if (!cat.places.length) return;
+        html += `<div class="services-section">
+          <div class="services-category-header"><span>${cat.icon}</span>${cat.label}</div>`;
+        cat.places.forEach((place, i) => {
+          const props = place.properties;
+          const placeLat = place.geometry?.coordinates[1];
+          const placeLon = place.geometry?.coordinates[0];
+          const name = props.name || 'Unnamed';
+          const addr = props.address_line2 || props.formatted || '';
+          const rawDist = props.distance != null ? props.distance
+            : (placeLat && placeLon ? haversine(lat, lon, placeLat, placeLon) : null);
+          const dist = rawDist !== null
+            ? rawDist < 1000 ? Math.round(rawDist) + 'm' : (rawDist / 1000).toFixed(1) + 'km'
+            : '';
+          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + addr)}`;
+          html += `
+            <a class="service-card" href="${mapsUrl}" target="_blank" style="animation-delay:${i * 0.05}s">
+              <div>
+                <div class="service-name">${name}</div>
+                <div class="service-address">${addr}</div>
+              </div>
+              ${dist ? `<div class="service-dist">${dist} away</div>` : ''}
+            </a>`;
+        });
+        html += `</div>`;
+      });
+
+      el.innerHTML = html;
+    } catch (err) {
+      el.innerHTML = `<div class="error-msg">Could not load nearby services. Try again.</div>`;
+      console.error(err);
+    }
+  }
+
+  // ── Email modal ───────────────────────────────────────────
+  function openModal(rep) {
+    currentRep = rep;
+    document.getElementById('modal-rep-name').textContent = rep.name;
+    document.getElementById('email-subject').value = '';
+    document.getElementById('email-body').value = '';
+    document.getElementById('issue-select').value = '';
+    document.getElementById('issue-detail').value = '';
+    document.getElementById('modal-backdrop').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-backdrop').classList.remove('open');
+  }
+
+  async function generateEmail() {
+    if (!currentRep) return;
+    const issue = document.getElementById('issue-select').value;
+    const detail = document.getElementById('issue-detail').value;
+    const aiStatus = document.getElementById('ai-status');
+    aiStatus.classList.add('visible');
+
+    const prompt = `Write a brief, polite, and clear email to a government representative named ${currentRep.name} (${currentRep.elected_office}).
+The constituent lives in the area represented by ${currentRep.representative_set_name}.
+Issue category: ${issue || 'general concern'}.
+Specific details: ${detail || 'Not provided'}.
+Write in first person. Keep it under 150 words. Include a clear subject line on the first line starting with "Subject: ".
+Do not include placeholders like [Your Name] — end with just "A Concerned Resident".`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const lines = text.split('\n');
+      const subjectLine = lines.find(l => l.startsWith('Subject:'));
+      const body = lines.filter(l => !l.startsWith('Subject:')).join('\n').trim();
+      if (subjectLine) document.getElementById('email-subject').value = subjectLine.replace('Subject:', '').trim();
+      document.getElementById('email-body').value = body;
+    } catch {
+      document.getElementById('email-body').value = `Dear ${currentRep.name},\n\nI am writing to bring your attention to a concern in our community regarding ${detail || issue || 'an important local issue'}.\n\nI would appreciate your attention to this matter and look forward to your response.\n\nSincerely,\nA Concerned Resident`;
+      document.getElementById('email-subject').value = `Community Concern — ${issue || 'Local Issue'}`;
+    } finally {
+      aiStatus.classList.remove('visible');
+    }
+  }
+
+  function sendEmail() {
+    if (!currentRep?.email) return alert('No email address available for this representative.');
+    const subject = encodeURIComponent(document.getElementById('email-subject').value);
+    const body = encodeURIComponent(document.getElementById('email-body').value);
+    window.open(`mailto:${currentRep.email}?subject=${subject}&body=${body}`);
+  }
+
+  function copyInfo(name, email) {
+    const text = `${name}${email ? ' — ' + email : ''}`;
+    navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+  }
+
+  document.getElementById('modal-backdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-backdrop')) closeModal();
+  });
+
+  // ── Budget Tab ────────────────────────────────────────────
+
+  // Budget data structure: keyed by lowercase city match string
+  // Each city has 2025 and 2026 data with categories per year
+  const CITY_BUDGETS = {
+
+    'toronto': {
+      contactEmail: 'mayor_chow@toronto.ca',
+      years: {
+        2025: {
+          label: 'Toronto 2025 Approved Budget',
+          levy: 'Operating: $18.5B · Tax increase: 6.9%',
+          source: 'https://www.toronto.ca/city-government/budget-finances/city-budget/',
+          categories: [
+            { icon: '🚇', label: 'Transit (TTC)', amount: '$2.4B subsidy',
+              context: 'Toronto 2025: TTC operating subsidy $2.4B. Fare revenue not fully recovered from pre-2019 levels. City Building Fund levy 1.5% dedicated to transit capital. New streetcars and subway signal upgrades ongoing. Fare freeze maintained for affordability.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: '$63.1B 10-yr plan',
+              context: 'Toronto 2025: $63.1B 10-year capital plan. Major infrastructure deficit from years of low tax increases. Road resurfacing, bridge repairs, watermain replacement ongoing. Capital funded partly through City Building Fund.' },
+            { icon: '🏠', label: 'Housing & Shelter', amount: 'Significant increase',
+              context: 'Toronto 2025: Shelter system costs exploded due to refugee and homeless population growth. City argues refugee settlement is federal responsibility but has received insufficient federal funding. Portion of 6.9% increase directly funded shelter system stabilization.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Police + Fire',
+              context: 'Toronto 2025: Toronto Police Service major budget driver. Fire and paramedics also funded through property tax. Community safety a key investment priority.' },
+            { icon: '📚', label: 'Libraries & Community', amount: 'Maintained',
+              context: 'Toronto 2025: Toronto Public Library fully funded. Community centres and recreation programs maintained. Low-income seniors property tax relief program supports ~11,500 households.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '6.9% increase',
+              context: 'Toronto 2025: 6.9% total tax increase (5.4% base + 1.5% City Building Fund). Second consecutive large increase after 9.5% in 2024. Average CVA $692,140. Assessments frozen at 2016 values. Residential rate 0.754087%.' }
+          ]
+        },
+        2026: {
+          label: 'Toronto 2026 Approved Budget',
+          levy: 'Operating: $18.9B · Tax increase: 2.2%',
+          source: 'https://www.toronto.ca/city-government/budget-finances/city-budget/',
+          categories: [
+            { icon: '🚇', label: 'Transit (TTC)', amount: '$18.9B operating',
+              context: 'Toronto 2026: Budget focuses on keeping city moving and maintaining frontline services. TTC fares frozen as affordability measure. City Building Fund 1.5% levy continues funding transit capital. $63.1B 10-year capital plan ongoing.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: '$63.1B 10-yr plan',
+              context: 'Toronto 2026: Historic $63.1B 10-year capital plan adopted. $42.6B tax supported, $20.5B rate supported. Mayor Chow prioritized affordability over new spending — far smaller increase than 2024 and 2025.' },
+            { icon: '🏠', label: 'Housing & Shelter', amount: 'Affordability focus',
+              context: 'Toronto 2026: Budget explicitly prioritizes affordability. New Municipal Land Transfer Tax tier for luxury homes introduced late 2025 to fund housing. Property tax relief maintained for eligible low-income seniors and persons with disabilities.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Community safety',
+              context: 'Toronto 2026: Community safety listed as budget priority. New Multi-Residential subclass provides 15% tax reduction for qualifying new rental buildings — incentive for purpose-built rentals.' },
+            { icon: '📚', label: 'Libraries & Community', amount: 'Stable',
+              context: 'Toronto 2026: Services maintained at stable levels. 0.7% operating levy increase for residential and industrial properties. Election year — Mayor Chow facing October 2026 municipal election, influence on modest increase.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '2.2% increase',
+              context: 'Toronto 2026: 2.2% total increase — by far smallest of Mayor Chow's tenure (vs 9.5% in 2024, 6.9% in 2025). $91.53/year increase on average assessed Toronto home ($692,140). 0.7% operating levy + 1.5% City Building Fund. Assessments still frozen at 2016 values.' }
+          ]
+        }
+      }
+    },
+
+    'hamilton': {
+      contactEmail: 'clerk@hamilton.ca',
+      years: {
+        2025: {
+          label: 'Hamilton 2025 Adopted Budget',
+          levy: 'Net levy ~$1.24B · Tax increase: ~5.5%',
+          source: 'https://www.hamilton.ca/city-council/city-administration/city-budget/2025-tax-rate-budget',
+          categories: [
+            { icon: '🚌', label: 'Transit (HSR)', amount: 'Key investment',
+              context: 'Hamilton 2025: Hamilton Street Railway funded through tax budget. Transit expansion part of 2022-2026 Council Priorities. Growing population requires expanded service. Strong mayor powers introduced new budget adoption process this year.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Hamilton 2025: Significant capital investment for roads and aging infrastructure. Capital financing costs increasing year over year. Infrastructure deficit a major long-term challenge. Tax capital financing levy funds capital projects.' },
+            { icon: '🏥', label: 'Public Health', amount: 'Board of Health',
+              context: 'Hamilton 2025: Board of Health funded through property tax. Hamilton is a separated city — funds its own public health services. Social services and housing supports significant budget driver.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Police + Fire',
+              context: 'Hamilton 2025: Hamilton Police Service major budget driver. Fire and EMS also funded through property tax. Community safety key Council priority for 2022-2026 term.' },
+            { icon: '🌊', label: 'Water & Environment', amount: 'Rate budget',
+              context: 'Hamilton 2025: Separate water/rate budget alongside tax budget. Stormwater management funded through rate budget. Water and wastewater user fees cover rate supported costs.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '~5.5% increase',
+              context: 'Hamilton 2025: Adopted February 19, 2025. Tax increase approximately 5.5% after strong mayor process. Budget designed to enhance quality of life while maintaining affordability and sustainability. Tax budget covers roads, transit, housing, recreation, public health, emergency services.' }
+          ]
+        },
+        2026: {
+          label: 'Hamilton 2026 Proposed Budget',
+          levy: 'Net levy $1.33B · Proposed increase: 4.25–5.5%',
+          source: 'https://www.hamilton.ca/city-council/city-administration/city-budget/2026-tax-water-rate-budget',
+          categories: [
+            { icon: '🚌', label: 'Transit (HSR)', amount: 'Maintained',
+              context: 'Hamilton 2026: Budget continues transit investment. Mayor Horwath's "hold the line" direction targets 4.25% max increase. New boards and agencies funding accounts for 1.2% of increase including $239M more for Hamilton Police Service.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital $80.5M+',
+              context: 'Hamilton 2026: Capital budget approximately $80.5M+. Revised financing approach leverages surpluses from capital projects. City deferring loan repayments from Hamilton Future Fund to manage affordability.' },
+            { icon: '🏥', label: 'Public Health', amount: '+$18.6M Board of Health',
+              context: 'Hamilton 2026: $18.6M increase to Board of Health (now semi-autonomous as of July 2025). Board of Health separated from Council in 2025 — new governance model. Budget accounts for full-year costs.' },
+            { icon: '🚒', label: 'Emergency Services', amount: '+$239M Police',
+              context: 'Hamilton 2026: Hamilton Police Service allocated $239M — major increase. Emergency services remain largest budget driver. Staff found $52.9M in cost savings across departments to partially offset.' },
+            { icon: '🌊', label: 'Water & Environment', amount: '7.32% water increase',
+              context: 'Hamilton 2026: Water budget already approved at 7.32% increase ($77/household annually). Tax budget separate from rate budget. Stormwater fee restructuring ongoing with new model effective April 2026.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '4.25–5.5% proposed',
+              context: 'Hamilton 2026: Mayor Horwath directed "hold the line" — target max 4.25%. Staff proposal came in at 5.5% ($293 increase on average $387,000 home). Council reviewing amendments. $34M from reserves (vs $63M in 2025). Final adoption expected Feb/March 2026.' }
+          ]
+        }
+      }
+    },
+
+    'mississauga': {
+      contactEmail: 'budget@mississauga.ca',
+      years: {
+        2025: {
+          label: 'Mississauga 2025 Adopted Budget',
+          levy: 'City budget: $759M · Overall tax increase: 9.2%',
+          source: 'https://www.mississauga.ca/council/budget-and-finances/city-of-mississauga-budget/',
+          categories: [
+            { icon: '🚌', label: 'Transit (MiWay)', amount: '120,000+ hrs added',
+              context: 'Mississauga 2025: 120,000+ transit service hours added to meet growing demand. Free PRESTO fares for seniors 65+ and children 6-12 effective July 1, 2025. 78 hybrid buses planned. Hybrid bus savings $229,000 vs diesel. Transit major city expenditure.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: '3% levy (reduced)',
+              context: 'Mississauga 2025: Capital Infrastructure & Debt Repayment Levy at 3% (reduced from earlier years). Infrastructure gap $90M in 2025 — gap between what's needed and capital available. City owns 2/3 of all infrastructure in Canada with replacement cost $18.5B.' },
+            { icon: '🔥', label: 'Fire & Emergency', amount: 'Station 124 opened',
+              context: 'Mississauga 2025: Fire Station 124 opened. New communications operators, vehicle technicians and training officers added. 1% Public Safety Fire Program levy funds fire station repairs and equipment. Peel Regional Police budget up 23% — 4.6% of total tax bill increase.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Free senior programs',
+              context: 'Mississauga 2025: Free older adult recreational programming. Vacuum leaf collection expanded. South Common Community Centre renovation ongoing (target 2027 reopening with new aquatics centre). Glenforest Youth Hub construction started.' },
+            { icon: '🏠', label: 'Housing & Flood Relief', amount: '$1,000 flood grant',
+              context: 'Mississauga 2025: Residential Compassionate Flood Relief Grant — one-time $1,000 payment for residents impacted by July/August flooding. By-law enforcement officers added for apartment rental compliance. Animal services staff added.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '9.2% overall increase',
+              context: 'Mississauga 2025: 9.2% overall tax increase (3.3% city + 5.9% Region of Peel). Highest ever year-over-year increase. Peel Regional Police budget up 23.3% — alone accounts for 4.6% of total increase. 37% of tax dollar stays with city; 47% to Region; 16% to education.' }
+          ]
+        },
+        2026: {
+          label: 'Mississauga 2026 Adopted Budget',
+          levy: 'City budget: $789.4M · Overall tax increase: 5.21%',
+          source: 'https://www.mississauga.ca/council/budget-and-finances/city-of-mississauga-budget/',
+          categories: [
+            { icon: '🚌', label: 'Transit (MiWay)', amount: '78 hybrid buses',
+              context: 'Mississauga 2026: Parkland and hybrid bus acquisitions — 78 buses planned. Free fitness memberships for residents 65+ added. Free PRESTO fares continue for seniors and children under 12. Budget delivers 200+ programs and services.' },
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Levy reduced to 1%',
+              context: 'Mississauga 2026: Capital Infrastructure & Debt Repayment Levy reduced from 3% to 1% for one year (affordability measure). Ninth Line widening project ongoing. Roadway rehabilitation across city continues. Regional infrastructure downloads from Peel anticipated.' },
+            { icon: '🔥', label: 'Fire & Emergency', amount: 'Fire program paused',
+              context: 'Mississauga 2026: One-year pause on 1% Public Safety Fire Program levy (non-essential investment pause). Essential fire station repairs continue. New fire stations 127 and 128 in design phase — target 2029 opening. 41 new staff added, mostly cost-neutral.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Youth hub 2027',
+              context: 'Mississauga 2026: Glenforest Youth Hub construction continues (target late 2027 opening). South Common renovation on track. Free senior recreation maintained. Budget responds to community wish to keep taxes minimal.' },
+            { icon: '🏠', label: 'Housing & Affordability', amount: 'Below inflation',
+              context: 'Mississauga 2026: City explicitly targeted keeping increase below inflation rate. 4% less than 2025 overall increase. Low-income senior and disability tax rebate $571. City found savings through efficiencies and pausing non-essential investments.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '5.21% overall increase',
+              context: 'Mississauga 2026: $789.4M budget, 4.39% city increase → 1.61% on city portion of tax bill ($16.66 per $100,000 assessed). Region of Peel adds 3.60%. Total 5.21% — 4% less than 2025. ~$53.91 more per $100,000 assessed value.' }
+          ]
+        }
+      }
+    },
+
+    'oakville': {
+      contactEmail: 'budget@oakville.ca',
+      years: {
+        2025: {
+          label: 'Oakville 2025 Budget',
+          levy: 'Town levy · Tax increase: ~3.5%',
+          source: 'https://www.oakville.ca/town-hall/budget-and-finances/annual-budget/',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Oakville 2025: Ongoing road resurfacing and infrastructure renewal. 44 cents of every tax dollar goes to Town services. Halton Region receives 38 cents for regional services including roads, water, waste. 18 cents to education.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Full programs',
+              context: 'Oakville 2025: Parks, trails and recreation facilities maintained. Town recognized for high quality of life. Recreation programming for all ages funded through operating budget.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Fire + Police',
+              context: 'Oakville 2025: Fire services funded through town budget. Halton Regional Police funded through Halton Region portion of tax bill (38 cents of every dollar). OPP does not police Oakville.' },
+            { icon: '🌊', label: 'Stormwater', amount: 'Rainwater plan',
+              context: 'Oakville 2025: Rainwater Management Plan under development. New stormwater fee to be introduced in 2026 to create sustainable, dedicated funding. Climate resilience investment growing.' },
+            { icon: '🌿', label: 'Sustainability', amount: 'Strategic plan',
+              context: 'Oakville 2025: Sustainability and resiliency key pillars of 2022-2026 Strategic Plan. Environmental investments funded through capital and operating budgets. Tree canopy and green space maintained.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '~3.5% increase',
+              context: 'Oakville 2025: ~3.5% overall tax increase. Oakville consistently maintains lowest tax increases among neighbouring municipalities. 44% to Town, 38% to Halton Region, 18% to education. Inflationary pressures offset through efficiencies.' }
+          ]
+        },
+        2026: {
+          label: 'Oakville 2026 Adopted Budget',
+          levy: 'Town levy · Overall tax increase: 1.96%',
+          source: 'https://www.oakville.ca/town-hall/news-notices/2025-news-releases-archive/oakville-council-approves-2026-budget-with-focus-on-resilience-and-sustainability/',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: '0.47% town levy',
+              context: 'Oakville 2026: Town levy increase just 0.47%. Roadway renewal continues within constrained budget. Halton Region adds 4.6% for regional roads, water, waste. Total combined 1.96% — lowest among neighbouring municipalities.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Maintained',
+              context: 'Oakville 2026: Parks and recreation programs maintained. Strategic Plan 2022-2026 nearing substantial completion. Council aimed to deliver remaining plan commitments affordably.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Halton Regional Police',
+              context: 'Oakville 2026: Fire funded through town budget. Halton Regional Police and paramedics funded through region. Halton Region 2026 budget increase 4.6% ($293 impact per household for combined regional and police services).' },
+            { icon: '🌊', label: 'Stormwater Fee', amount: 'New dedicated fee',
+              context: 'Oakville 2026: New stormwater fee introduced as part of Rainwater Management Plan. Creates dedicated, sustainable funding model for stormwater infrastructure. Designed to prepare Oakville for future climate challenges. Fee separate from property tax.' },
+            { icon: '🌿', label: 'Sustainability', amount: 'Climate resilience',
+              context: 'Oakville 2026: Sustainability and resilience focus of budget. Stormwater fee part of broader climate adaptation. Budget unanimously adopted — all councillors supported direction. Council noted economic uncertainty from Canada-US trade tensions as concern.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '1.96% increase',
+              context: 'Oakville 2026: 1.96% overall property tax increase — lowest among neighbouring municipalities and well under 2026 inflation forecast. $16.33 more per $100,000 assessed value. $800,000 home: +$130.64 (total ~$6,807). Adopted unanimously December 2025.' }
+          ]
+        }
+      }
+    },
+
+    'burlington': {
+      contactEmail: 'clerk@burlington.ca',
+      years: {
+        2025: {
+          label: 'Burlington 2025 Approved Budget',
+          levy: 'Net Tax Levy: $264.7M · Tax increase: 5.82%',
+          source: 'https://www.burlington.ca/en/council-and-city-administration/approved-budget-book.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: '$6.3M capital',
+              context: 'Burlington 2025: $6.3M allocated for Plains Road renewal to decrease traffic congestion. 2% dedicated infrastructure renewal levy generating $4.86M for aging asset replacement. Overall capital budget $103.5M across all wards. Asset Management Financing Plan targets long-term renewal. July 2024 flooding influenced priorities.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: '$12M capital',
+              context: 'Burlington 2025: $12M to renew City parks including City View Park. $10M for repair and renewal of City facilities. New washroom hours at Spencer Smith Park (+$15,000). Robert Bateman Community Centre and Skyway Arena fully operational. Urban forestry improvements $112,000.' },
+            { icon: '🚌', label: 'Transit', amount: '$7.8M capital',
+              context: 'Burlington 2025: $7.8M for Burlington Transit Operations Facility expansion. Burlington population expected to grow 40% over 25 years. Transit funded through 51% city portion of property tax bill.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Fire + Police',
+              context: 'Burlington 2025: Fire safety key investment. 33% of property tax goes to Halton Region funding Halton Regional Police. Automated Speed Enforcement fully offset by fine revenues ($842,000).' },
+            { icon: '🌊', label: 'Environment & Flood Protection', amount: '$5.2M capital',
+              context: 'Burlington 2025: $5.2M for Stormwater Management to reduce flood risk. Green infrastructure projects funded. July 2024 flooding tested city resilience and directly influenced 2025 budget priorities.' },
+            { icon: '📚', label: 'Library & Community Services', amount: '+$293,792',
+              context: 'Burlington 2025: 1.75% base budget increase for local boards. Increased Burlington Public Library contribution. BPAC and Burlington Economic Development also funded. 74.5% of residents satisfied with city services.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '5.82% increase',
+              context: 'Burlington 2025: Net tax levy $264,723,845. Overall 5.82% (city 7.51% + Halton Region 6%). $52.91/year per $100,000 assessed value. 51% City of Burlington, 33% Halton Region, 16% Education.' }
+          ]
+        },
+        2026: {
+          label: 'Burlington 2026 Proposed Budget',
+          levy: 'Net Tax Levy: ~$279M · Tax increase: 5.80%',
+          source: 'https://www.burlington.ca/en/council-and-city-administration/approved-budget-book.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Burlington 2026: Continued infrastructure renewal program. 2% infrastructure levy sustained. Asset management financing plan maintained. Plains Road renewal Phase 2 planning. Overall capital budget continues at ~$100M+ scale.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Ongoing renewal',
+              context: 'Burlington 2026: Parks renewal program continues. Robert Bateman Community Centre and Skyway Arena annualized costs now fully included in base budget. Ongoing facility renewal investments.' },
+            { icon: '🚌', label: 'Transit', amount: 'Expanded service',
+              context: 'Burlington 2026: Burlington Transit Operations Facility expansion completion. Service expansion to accommodate population growth trajectory. 40% population growth anticipated over 25 years driving transit investment.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Maintained',
+              context: 'Burlington 2026: Fire services maintained. Halton Regional Police funded through Halton Region portion. Bylaw enforcement continued.' },
+            { icon: '🌊', label: 'Environment & Climate', amount: 'Flood mitigation',
+              context: 'Burlington 2026: Continued stormwater and flood mitigation investment following lessons from July 2024. Climate adaptation listed as core sustainability principle. Green infrastructure program continued.' },
+            { icon: '📚', label: 'Library & Community', amount: 'Local boards',
+              context: 'Burlington 2026: Burlington Public Library and local boards funding continued. Community programs maintained.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '5.80% proposed',
+              context: 'Burlington 2026: 5.80% proposed overall increase, slightly lower than 2025's 5.82%. City portion 4.49% overall. Halton Region portion also contributing. ~$52/year per $100,000 assessed value anticipated.' }
+          ]
+        }
+      }
+    },
+
+    'kitchener': {
+      contactEmail: 'hello@kitchener.ca',
+      years: {
+        2025: {
+          label: 'Kitchener 2025 Budget',
+          levy: 'City levy · Tax increase: ~3.5%',
+          source: 'https://www.kitchener.ca/en/city-services/budget.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Kitchener 2025: Infrastructure renewal and road resurfacing ongoing. Kitchener part of Region of Waterloo — regional portion of tax bill covers regional roads, transit, water. City levy covers local services.' },
+            { icon: '🚌', label: 'Transit (GRT)', amount: 'Regional service',
+              context: 'Kitchener 2025: Grand River Transit (GRT) funded through Region of Waterloo budget. ION light rail operational. City transit priorities coordinated with regional partners. Regional tax portion covers GRT.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Full programs',
+              context: 'Kitchener 2025: The Aud arena maintained. Parks and trails program continued. Recreation facilities across the city funded. Community programming a priority.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Fire + Waterloo Regional Police',
+              context: 'Kitchener 2025: Fire services funded through city budget. Waterloo Regional Police Service funded through Region of Waterloo. Combined city and region covers full public safety spectrum.' },
+            { icon: '🏘️', label: 'Housing', amount: 'Growing pressure',
+              context: 'Kitchener 2025: Housing affordability a key issue in Waterloo Region. City working within strong mayor powers framework. Development charges fund growth capital. Rental market pressures ongoing.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '~3.5% increase',
+              context: 'Kitchener 2025: Modest tax increase. Mayor Vrbanovic committed to lowest increase possible while maintaining services. Region of Waterloo adds regional portion. Kitchener known for responsible financial management.' }
+          ]
+        },
+        2026: {
+          label: 'Kitchener 2026 Approved Budget',
+          levy: 'City levy · Tax increase: 2.2%',
+          source: 'https://www.kitchener.ca/en/city-services/budget.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital maintained',
+              context: 'Kitchener 2026: 2.2% city tax increase — one of the lowest in the region. Capital program maintained. Kitchener compares favourably to Guelph (4.6%) and Cambridge (4.86%). CFO confirmed no service cuts despite small increase.' },
+            { icon: '🚌', label: 'Transit (GRT)', amount: 'Region adds 4.94%',
+              context: 'Kitchener 2026: City portion 2.2% but Region of Waterloo adding 4.94% ($96/household). Grand River Transit funded through regional budget. ION expansion planning continues. Total tax impact higher than city increase alone suggests.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'The Aud upgrades',
+              context: 'Kitchener 2026: $4.5M approved for The Aud upgrades — improved players area and new restaurant. Parks and recreation fully maintained. Mayor committed to delivering services residents value.' },
+            { icon: '🚒', label: 'Emergency Services', amount: 'Stable',
+              context: 'Kitchener 2026: Fire services maintained within modest budget. Waterloo Regional Police funded separately through regional budget. No emergency service reductions.' },
+            { icon: '🏘️', label: 'Housing & Development', amount: 'Affordability focus',
+              context: 'Kitchener 2026: Affordability explicitly top of mind. Mayor Vrbanovic: "we know affordability is top of mind for our residents." US tariffs and trade war noted as uncertainty factors for 2026 economic outlook.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '2.2% city increase',
+              context: 'Kitchener 2026: 2.2% city tax increase ($29 annually for average homeowner). Water utility up 4.9% ($24/yr). Total utilities and tax impact ~$117/year for average household. Region of Waterloo adds separate 4.94% regional increase.' }
+          ]
+        }
+      }
+    },
+
+    'brampton': {
+      contactEmail: 'clerks@brampton.ca',
+      years: {
+        2025: {
+          label: 'Brampton 2025 Budget',
+          levy: 'City levy ~$639M · Tax increase: 2.9%',
+          source: 'https://www.brampton.ca/EN/City-Hall/Budget/Pages/Welcome.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Brampton 2025: Road resurfacing and capital renewal ongoing. Peel Memorial Centre levy (1% introduced 2022) continues funding hospital upgrade project. Average homeowner saw nearly $200 spike in 2025 taxes. Prior to 2022, taxes were frozen for years under Mayor Brown.' },
+            { icon: '🚌', label: 'Transit (BT)', amount: 'Brampton Transit',
+              context: 'Brampton Transit funded through city budget. Peel Region also funds transit-related regional services. Growing population demands expanded service. Region of Peel adding 3.31% for Brampton residents in 2026 regional portion.' },
+            { icon: '🔥', label: 'Fire & Emergency', amount: 'Peel Police major driver',
+              context: 'Brampton 2025: Peel Regional Police budget up 23% in 2025. Brampton contributes 38% of Peel Regional Police budget (Mississauga contributes 62%). Major factor in overall tax increase. Fire services funded through city budget.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Full programs',
+              context: 'Brampton 2025: Parks, recreation and community centres funded. Growing city with rapid population increase. Budget pressure from service demand expansion.' },
+            { icon: '🏠', label: 'Housing', amount: 'Growing demand',
+              context: 'Brampton 2025: One of the fastest growing cities in Canada. Development charges fund capital growth projects. Affordable housing pressure significant. Past tax freezes created infrastructure deficit requiring current catch-up investments.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '2.9% city increase',
+              context: 'Brampton 2025: ~2.9% city tax increase but overall bill higher due to Peel Region (12.5% regional increase). Average homeowner saw nearly $200 spike. In 2024 average Brampton homeowner paid over $11,000 in property tax due to 6%+ hike. Years of tax freezes created current pressures.' }
+          ]
+        },
+        2026: {
+          label: 'Brampton 2026 Budget (Interim)',
+          levy: 'Interim levy: $766M · Final budget pending',
+          source: 'https://www.brampton.ca/EN/City-Hall/Budget/Pages/Welcome.aspx',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital ongoing',
+              context: 'Brampton 2026: Interim tax levy of $766M approved to allow billing ahead of final budget. City portion ~$309M of interim levy. Final budget and rates to be confirmed. Infrastructure investment continues as city catches up from years of underfunding.' },
+            { icon: '🚌', label: 'Transit (BT)', amount: 'Service maintained',
+              context: 'Brampton 2026: Brampton Transit service maintained. Region of Peel adds 3.31% for Brampton residents (regional portion). Peel infrastructure downloads from provincial government anticipated — may shift costs to lower tiers.' },
+            { icon: '🔥', label: 'Fire & Emergency', amount: 'Police still major driver',
+              context: 'Brampton 2026: Peel Regional Police budget continues as major factor. Another significant police increase anticipated in 2026 following 23% hike in 2025. City must fund its share of regional police.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Growing city',
+              context: 'Brampton 2026: Rapidly growing population requires expanded parks and recreation. Development charges fund new capital infrastructure. Service expansion ongoing to keep pace with growth.' },
+            { icon: '🏠', label: 'Housing & Growth', amount: 'Rapid growth',
+              context: 'Brampton 2026: One of Canada's fastest growing cities. Housing development and infrastructure to support growth key budget pressures. Election year 2026 may influence final tax rate decisions.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: 'Final rate pending',
+              context: 'Brampton 2026: Interim levy $766M approved (cannot exceed 50% of prior year total taxes under Ontario law). Final tax rate and budget to be confirmed. Combined city + Peel Region increase for 2026 anticipated at ~5% overall.' }
+          ]
+        }
+      }
+    },
+
+    'guelph': {
+      contactEmail: 'cityhall@guelph.ca',
+      years: {
+        2025: {
+          label: 'Guelph 2025 Budget',
+          levy: 'City levy · Tax increase: ~4%',
+          source: 'https://guelph.ca/city-hall/budget-and-finance/',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Guelph 2025: Infrastructure renewal and road resurfacing continued. Guelph is a single-tier municipality — funds all services itself (no upper-tier region). Full range of services from police to transit funded through city budget.' },
+            { icon: '🚌', label: 'Transit (Guelph Transit)', amount: 'City-funded',
+              context: 'Guelph 2025: Guelph Transit fully funded by city as single-tier municipality. No regional transit layer. Service expansion to meet growing population. ION connection to Waterloo region via Guelph Central Station.' },
+            { icon: '🚔', label: 'Police', amount: 'Guelph Police Service',
+              context: 'Guelph 2025: Guelph Police Service funded directly through city budget — unique as single-tier city. Not part of any regional police service. Police budget significant driver of overall city budget.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Full programs',
+              context: 'Guelph 2025: Parks, trails and community centres fully funded. Growing city with strong community investment. Green City strategy maintained. Environmental leadership a Guelph hallmark.' },
+            { icon: '🌿', label: 'Environment', amount: 'Green city focus',
+              context: 'Guelph 2025: Environmental leadership embedded in budget priorities. Green City approach to infrastructure and services. Waste management and sustainability programs funded. Climate resilience investment.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '~4% increase',
+              context: 'Guelph 2025: Single-tier municipality means full-service city budget. No regional government layer — all services bundled into city tax bill. Includes police, transit, roads, waste, water, parks, libraries. Budget reflects full cost of city services.' }
+          ]
+        },
+        2026: {
+          label: 'Guelph 2026 Budget',
+          levy: 'City levy · Tax increase: 4.6% proposed',
+          source: 'https://guelph.ca/city-hall/budget-and-finance/',
+          categories: [
+            { icon: '🏗️', label: 'Roads & Infrastructure', amount: 'Capital program',
+              context: 'Guelph 2026: 4.6% proposed increase — higher than neighbouring Kitchener (2.2%) but comparable to regional cities. Single-tier means full service range drives costs. Infrastructure renewal ongoing.' },
+            { icon: '🚌', label: 'Transit (Guelph Transit)', amount: 'Expanded service',
+              context: 'Guelph 2026: Transit service expansion continuing. As single-tier city Guelph funds all transit costs directly. No regional transit subsidy. Growing population demands more service.' },
+            { icon: '🚔', label: 'Police', amount: 'Guelph Police Service',
+              context: 'Guelph 2026: Guelph Police Service budget significant driver. Policing cost pressures affecting most Ontario municipalities. Guelph funds police directly unlike two-tier municipalities.' },
+            { icon: '🌳', label: 'Parks & Recreation', amount: 'Maintained',
+              context: 'Guelph 2026: Parks and recreation fully maintained. Green City approach continues. Community programs sustained despite budget pressures.' },
+            { icon: '🌿', label: 'Environment', amount: 'Climate resilience',
+              context: 'Guelph 2026: Environmental leadership continued. Climate adaptation investments. Green infrastructure maintained. Guelph's environmental reputation a community priority reflected in budget.' },
+            { icon: '💰', label: 'Overall Tax Summary', amount: '4.6% proposed',
+              context: 'Guelph 2026: 4.6% proposed increase — compared to Kitchener 2.2%, Cambridge 4.86%. Single-tier full-service budget. Police + transit + full municipal services bundled into one tax bill. No regional government to share costs with.' }
+          ]
+        }
+      }
+    }
+
+  };
+
+  const DEFAULT_BUDGET_CATEGORIES = [
+    { icon: '🏗️', label: 'Roads & Infrastructure', amount: '—', source: '', context: '' },
+    { icon: '🌳', label: 'Parks & Recreation', amount: '—', source: '', context: '' },
+    { icon: '🚌', label: 'Transit', amount: '—', source: '', context: '' },
+    { icon: '🚒', label: 'Emergency Services', amount: '—', source: '', context: '' },
+    { icon: '🌊', label: 'Environment', amount: '—', source: '', context: '' },
+    { icon: '🏠', label: 'Housing & Affordability', amount: '—', source: '', context: '' },
+    { icon: '📚', label: 'Community Services', amount: '—', source: '', context: '' },
+    { icon: '💰', label: 'Overall Tax Summary', amount: '—', source: '', context: '' }
+  ];
+
+  let currentCityKey = null;
+  let currentYear = 2025;
+  const budgetSummaryCache = {};
+
+  function initBudgetTab(addressText) {
+    const addr = (addressText || '').toLowerCase();
+    currentCityKey = Object.keys(CITY_BUDGETS).find(k => addr.includes(k)) || null;
+
+    // Reset year to 2025 on new search
+    currentYear = 2025;
+    updateYearToggle();
+    renderBudgetCards();
+  }
+
+  function updateYearToggle() {
+    const btns = document.querySelectorAll('.year-btn');
+    btns.forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.year) === currentYear);
+    });
+  }
+
+  function switchBudgetYear(year) {
+    currentYear = year;
+    updateYearToggle();
+    // Clear cache for year switch so Claude re-summarizes
+    Object.keys(budgetSummaryCache).forEach(k => delete budgetSummaryCache[k]);
+    renderBudgetCards();
+  }
+
+  function renderBudgetCards() {
+    const cityData = currentCityKey ? CITY_BUDGETS[currentCityKey] : null;
+    const yearData = cityData ? cityData.years[currentYear] : null;
+
+    const cityLabel = document.getElementById('budget-city-label');
+    const levyLabel = document.getElementById('budget-levy-label');
+
+    if (yearData) {
+      cityLabel.textContent = '📅 ' + yearData.label;
+      levyLabel.innerHTML = yearData.levy;
+    } else if (currentCityKey) {
+      cityLabel.textContent = '📅 ' + currentCityKey.charAt(0).toUpperCase() + currentCityKey.slice(1) + ' — ' + currentYear + ' data coming soon';
+      levyLabel.innerHTML = '';
+    } else {
+      cityLabel.textContent = '📅 City Budget — search your address to load local data';
+      levyLabel.innerHTML = '';
+    }
+
+    const categories = yearData ? yearData.categories : DEFAULT_BUDGET_CATEGORIES;
+    const container = document.getElementById('budget-cards');
+
+    container.innerHTML = categories.map((cat, i) => `
+      <div class="budget-card" style="animation-delay:${i * 0.05}s">
+        <button class="budget-card-btn" onclick="toggleBudgetCard(this, ${i})">
+          <div class="budget-card-left">
+            <span class="budget-card-icon">${cat.icon}</span>
+            <span class="budget-card-label">${cat.label}</span>
+          </div>
+          <span class="budget-card-amount">${cat.amount}</span>
+          <span class="budget-card-chevron">▼</span>
+        </button>
+        <div class="budget-bubble" id="bubble-${i}"></div>
+      </div>
+    `).join('');
+  }
+
+  async function toggleBudgetCard(btn, idx) {
+    const bubble = document.getElementById('bubble-' + idx);
+    const isOpen = bubble.classList.contains('open');
+
+    document.querySelectorAll('.budget-card-btn').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.budget-bubble').forEach(b => b.classList.remove('open'));
+
+    if (isOpen) return;
+
+    btn.classList.add('open');
+    bubble.classList.add('open');
+
+    const cacheKey = (currentCityKey || 'unknown') + '_' + currentYear + '_' + idx;
+
+    if (budgetSummaryCache[cacheKey]) {
+      bubble.innerHTML = budgetSummaryCache[cacheKey];
+      return;
+    }
+
+    const cityData = currentCityKey ? CITY_BUDGETS[currentCityKey] : null;
+    const yearData = cityData ? cityData.years[currentYear] : null;
+
+    if (!yearData) {
+      const cityName = currentCityKey
+        ? currentCityKey.charAt(0).toUpperCase() + currentCityKey.slice(1)
+        : 'your city';
+      const issueUrl = `https://github.com/wetmud/CivicConnect/issues/new?template=city-request.md&title=${encodeURIComponent('Budget data request: ' + cityName + ' ' + currentYear)}&body=${encodeURIComponent('**City:** ' + cityName + '\n**Year:** ' + currentYear + '\n\n**Budget page URL:**\n')}`;
+      bubble.innerHTML = `<div class="bubble-tldr"><strong>Coming Soon</strong>Budget data for ${cityName} ${currentYear} hasn\'t been added yet.<br><br><a class="bubble-source" href="${issueUrl}" target="_blank">↗ Request it on GitHub</a></div>`;
+      return;
+    }
+
+    const cat = yearData.categories[idx];
+    bubble.innerHTML = `<div class="bubble-loading"><div class="spinner" style="width:16px;height:16px;border-width:2px;flex-shrink:0;"></div>Summarizing...</div>`;
+
+    try {
+      const cityName = currentCityKey.charAt(0).toUpperCase() + currentCityKey.slice(1);
+      const prompt = `Summarize this ${currentYear} municipal budget section for a regular ${cityName}, Ontario resident.
+
+Section: ${cat.label}
+Data: ${cat.context}
+
+Respond ONLY in this exact JSON format (no markdown, no extra text):
+{
+  "tldr": "One or two plain-language sentences a resident would actually understand.",
+  "breakdown": "3-5 bullet points, each on its own line starting with •"
+}`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.content?.[0]?.text || '';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      const html = renderBubbleHTML(parsed, cat, yearData.source);
+      budgetSummaryCache[cacheKey] = html;
+      bubble.innerHTML = html;
+
+    } catch (e) {
+      const fallback = { tldr: cat.context.split('.')[0] + '.', breakdown: cat.context };
+      const html = renderBubbleHTML(fallback, cat, yearData?.source || '');
+      budgetSummaryCache[cacheKey] = html;
+      bubble.innerHTML = html;
+    }
+  }
+
+  function renderBubbleHTML(parsed, cat, sourceUrl) {
+    return `
+      <div class="bubble-tldr">
+        <strong>TL;DR</strong>
+        ${parsed.tldr}
+      </div>
+      <div class="bubble-breakdown">
+        <strong>Full Breakdown</strong>
+        ${parsed.breakdown}
+      </div>
+      <div class="bubble-actions">
+        ${sourceUrl ? `<a class="bubble-source" href="${sourceUrl}" target="_blank">↗ Source Document</a>` : ''}
+      </div>
+    `;
+  }
+
+  function switchBudgetTab(view, btn) {
+    document.querySelectorAll('.budget-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+y: only allow resources from trusted domains -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+    font-src https://fonts.gstatic.com;
+    img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
+    connect-src 'self' https://api.geoapify.com https://represent.opennorth.ca https://corsproxy.io https://api.anthropic.com;
+    frame-ancestors 'none';
+  "/>
+  <!-- No data collection, no tracking, no cookies -->
+  <meta name="referrer" content="no-referrer"/>
+  <title>CivicConnect — Contact Your Local Government</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f0c;
+      --surface: #161713;
+      --border: #2a2b27;
+      --accent: #c8f04a;
+      --accent-dim: #8aaa2a;
+      --text: #e8e9e2;
+      --text-muted: #7a7b72;
+      --danger: #ff6b4a;
+      --profile-bg: #131410;
+    }
+
+    :root.light {
+      --bg: #f7f7f2;
+      --surface: #ffffff;
+      --border: #d8d9d0;
+      --accent: #5a8a00;
+      --accent-dim: #7aaa20;
+      --text: #1a1b18;
+      --text-muted: #6a6b62;
+      --danger: #cc4422;
+      --profile-bg: #eeeee8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: nowrap;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tagline {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      text-align: right;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: border-color 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent);
+      transform: rotate(20deg);
+    }
+
+    @media (max-width: 480px) {
+      header { padding: 1rem 1.25rem; }
+      .logo { font-size: 1.25rem; }
+      .tagline { font-size: 0.58rem; letter-spacing: 0.08em; }
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3.5rem 1.25rem 3rem;
+    }
+
+    @media (max-width: 480px) {
+      main { padding: 2.5rem 1rem 2.5rem; }
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 600px;
+      margin-bottom: 3.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.2rem, 6vw, 3.8rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 em { font-style: italic; color: var(--accent); }
+
+    .hero p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 480px) {
+      .hero { margin-bottom: 2rem; }
+      .hero p { font-size: 0.78rem; }
+    }
+
+    .search-box {
+      width: 100%;
+      max-width: 560px;
+      animation: fadeUp 0.6s 0.15s ease both;
+      padding: 0 0.25rem;
+    }
+
+    @media (max-width: 480px) {
+      .search-box { padding: 0; }
+      #search-btn { padding: 0 1rem; font-size: 0.7rem; }
+    }
+
+    .autocomplete-wrapper { position: relative; }
+
+    .input-row {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      background: var(--surface);
+    }
+
+    .input-row:focus-within { border-color: var(--accent); }
+
+    #address-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 1rem 1.25rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      caret-color: var(--accent);
+    }
+
+    #address-input::placeholder { color: var(--text-muted); }
+
+    #search-btn {
+      background: var(--accent);
+      border: none;
+      padding: 0 1.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #0e0f0c;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #search-btn:hover { background: #d4f55a; }
+    #search-btn:active { transform: scale(0.97); }
+    #search-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+    .hint {
+      margin-top: 0.6rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1px solid var(--accent-dim);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 50;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .autocomplete-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: rgba(200, 240, 74, 0.08);
+      color: var(--accent);
+    }
+
+    /* ── Profile card ── */
+    #profile-card {
+      width: 100%;
+      max-width: 560px;
+      margin-top: 2rem;
+      background: var(--profile-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+      display: none;
+      padding: 0 0.25rem;
+    }
+
+    @media (max-width: 480px) {
+      #profile-card { padding: 0; margin-top: 1.25rem; }
+      .profile-info { padding: 0.9rem 1rem; }
+      #ward-map { height: 160px; }
+    }
+
+    .profile-info {
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .profile-address {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .profile-address-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .profile-ward-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .profile-ward-value {
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    #ward-map {
+      height: 200px;
+      width: 100%;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Leaflet container backgrounds */
+    :root:not(.light) .leaflet-container { background: #1a1c17; }
+    :root.light .leaflet-container { background: #e8e8e0; }
+
+    #results-container {
+      width: 100%;
+      max-width: 560px;
+      margin-top: 2rem;
+      padding: 0 0.25rem;
+    }
+
+    @media (max-width: 480px) {
+      #results-container { padding: 0; margin-top: 1.5rem; }
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.65rem 1.25rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    @media (max-width: 480px) {
+      .tab-btn { font-size: 0.65rem; padding: 0.6rem 0.85rem; letter-spacing: 0.06em; }
+      .tab-btn[data-short]::after { content: attr(data-short); }
+      .tab-btn[data-short] .tab-long { display: none; }
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .results-header {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rep-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+      animation: fadeUp 0.4s ease both;
+      transition: border-color 0.2s;
+    }
+
+    .rep-card:hover { border-color: var(--accent-dim); }
+
+    .rep-level {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+
+    .rep-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .rep-role {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.9rem;
+    }
+
+    .rep-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 480px) {
+      .rep-card { padding: 1rem 1.1rem; }
+      .rep-actions { flex-direction: column; gap: 0.4rem; }
+      .rep-actions .btn-outline,
+      .rep-actions .btn-primary { text-align: center; width: 100%; }
+      .rep-name { font-size: 1.1rem; }
+    }
+
+    .services-section { margin-bottom: 1.75rem; }
+
+    .services-category-header {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      margin-bottom: 0.65rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .service-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.9rem 1.25rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeUp 0.3s ease both;
+      transition: border-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .service-card:hover { border-color: var(--accent-dim); }
+
+    .service-name {
+      font-size: 0.82rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .service-address {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+    }
+
+    .service-dist {
+      font-size: 0.68rem;
+      color: var(--accent);
+      white-space: nowrap;
+      margin-left: 1rem;
+      background: rgba(200, 240, 74, 0.08);
+      border: 1px solid rgba(200, 240, 74, 0.2);
+      padding: 0.2rem 0.55rem;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .btn-outline {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-primary:hover { background: var(--accent); color: #0e0f0c; }
+
+    .loading {
+      text-align: center;
+      padding: 3rem 0;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    .error-msg {
+      background: rgba(255,107,74,0.08);
+      border: 1px solid rgba(255,107,74,0.3);
+      color: var(--danger);
+      font-size: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      margin-bottom: 1rem;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal label {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .modal input, .modal textarea, .modal select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      outline: none;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
+    .modal textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+    .modal select option { background: var(--surface); }
+
+    .ai-generating {
+      font-size: 0.72rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ai-generating.visible { display: flex; }
+
+    .dot-pulse { display: flex; gap: 3px; }
+    .dot-pulse span {
+      width: 4px; height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 1.2s infinite;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      padding: 1.5rem 2.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    footer a { color: var(--text-muted); text-decoration: underline; }
+
+    .privacy-banner {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .privacy-banner .privacy-text { display: flex; align-items: center; gap: 0.5rem; }
+    .privacy-banner .privacy-icon { color: var(--accent); font-size: 0.8rem; }
+
+    .privacy-dismiss {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .privacy-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Budget tab ── */
+    .budget-intro {
+      margin-bottom: 1.25rem;
+    }
+
+    .budget-intro p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+
+    .budget-sub-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+
+    .budget-sub-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .budget-sub-btn:hover { color: var(--text); }
+    .budget-sub-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .budget-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .budget-levy-row {
+      margin-bottom: 1rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      min-height: 1rem;
+    }
+
+    .budget-total strong { color: var(--accent); }
+
+    .year-toggle {
+      display: flex;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .year-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .year-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+
+    .year-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0e0f0c;
+      font-weight: 600;
+    }
+
+    :root.light .year-btn.active { color: #fff; }
+
+    /* Budget category cards */
+    .budget-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .budget-card:hover { border-color: var(--accent-dim); }
+
+    .budget-card-btn {
+      width: 100%;
+      background: var(--surface);
+      border: none;
+      padding: 0.95rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+      gap: 1rem;
+    }
+
+    .budget-card-btn:hover { background: rgba(200,240,74,0.04); }
+    .budget-card-btn.open { background: rgba(200,240,74,0.06); }
+
+    .budget-card-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .budget-card-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    .budget-card-label {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .budget-card-amount {
+      font-size: 0.7rem;
+      color: var(--accent);
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .budget-card-chevron {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .budget-card-btn.open .budget-card-chevron { transform: rotate(180deg); }
+
+    /* Expanded bubble */
+    .budget-bubble {
+      display: none;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 1.4rem;
+      animation: fadeUp 0.2s ease;
+    }
+
+    .budget-bubble.open { display: block; }
+
+    .bubble-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
+    .bubble-tldr {
+      font-size: 0.82rem;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bubble-tldr strong {
+      color: var(--accent);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .bubble-breakdown {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+    }
+
+    .bubble-breakdown strong {
+      color: var(--text);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+
+    .bubble-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+
+    .bubble-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.68rem;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--accent-dim);
+      padding: 0.25rem 0.7rem;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+
+    .bubble-source:hover { background: rgba(200,240,74,0.08); }
+
+    .bubble-recommend {
+      color: var(--text-muted);
+      border-color: var(--border);
+    }
+
+    .bubble-recommend:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+    .budget-footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .budget-footer-link {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .budget-footer-link:hover { color: var(--accent); }
+
+    /* Recommend box */
+    .recommend-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.4rem;
+    }
+
+    .recommend-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .recommend-desc {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.1rem;
+    }
+
+    .recommend-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    #rec-email-preview label {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      .budget-card-btn { padding: 0.8rem 1rem; }
+      .budget-meta { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+    }
+
+    .budget-standalone {
+      width: 100%;
+      max-width: 560px;
+      margin: 2.5rem auto 0;
+      padding: 0 0.25rem;
+    }
+
+    .budget-tabs {
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 480px) {
+      .budget-standalone { padding: 0 1rem; }
+    }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">CivicConnect</span>
+  <div class="header-right">
+    <span class="tagline">Know who represents you 🍁</span>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+      <span class="theme-icon">☀️</span>
+    </button>
+  </div>
+</header>
+
+<!-- Privacy notice banner -->
+<div class="privacy-banner" id="privacy-banner">
+  <div class="privacy-text">
+    <span class="privacy-icon">🔒</span>
+    <span>CivicConnect collects <strong>zero data</strong> about you. Addresses you search are never stored, logged, or shared. No cookies. No tracking. Everything happens in your browser and is gone when you leave.</span>
+  </div>
+  <button class="privacy-dismiss" onclick="dismissPrivacy()">Got it</button>
+</div>
+
+<main>
+  <div class="hero">
+    <h1>Your address.<br><em>Your voice.</em></h1>
+    <p>Enter your address to find your elected representatives and nearby government services — all in one place.</p>
+  </div>
+
+  <div class="search-box">
+    <div class="autocomplete-wrapper">
+      <div class="input-row">
+        <input
+          id="address-input"
+          type="text"
+          placeholder="e.g. 123 Main St, Burlington, ON"
+          autocomplete="off"
+        />
+        <button id="search-btn" onclick="findAll()">Find Reps →</button>
+      </div>
+      <div class="autocomplete-dropdown" id="autocomplete-dropdown" style="display:none;"></div>
+    </div>
+    <p class="hint">Start typing your Canadian address and select from suggestions.</p>
+  </div>
+
+  <div id="profile-card">
+    <div class="profile-info">
+      <div>
+        <div class="profile-address">Address</div>
+        <div class="profile-address-value" id="profile-address-text">—</div>
+        <div class="profile-ward-label">Ward / District</div>
+        <div class="profile-ward-value" id="profile-ward-text">—</div>
+      </div>
+    </div>
+    <div id="ward-map"></div>
+  </div>
+
+  <div id="results-container" style="display:none;">
+    <div class="tabs" id="search-tabs">
+      <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
+      <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
+      <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button>
+      <!-- FEDERAL TAB (saved for later): <button class="tab-btn" onclick="switchTab('federal', this)">Federal</button> -->
+    </div>
+    <div class="tab-panel active" id="tab-reps">
+      <div id="results-reps"></div>
+    </div>
+    <div class="tab-panel" id="tab-services">
+      <div id="results-services"></div>
+    </div>
+    <div class="tab-panel" id="tab-budget">
+      <div class="budget-meta">
+        <span id="budget-city-label">📅 City Budget</span>
+        <div class="year-toggle">
+          <button class="year-btn active" data-year="2025" onclick="switchBudgetYear(2025)">2025</button>
+          <button class="year-btn" data-year="2026" onclick="switchBudgetYear(2026)">2026</button>
+        </div>
+      </div>
+      <div class="budget-levy-row">
+        <span class="budget-total" id="budget-levy-label"></span>
+      </div>
+      <div id="budget-cards">
+        <div class="loading"><div class="spinner"></div>Search an address to load budget data...</div>
       </div>
       <div class="budget-footer">
         <a class="budget-footer-link" href="https://github.com/wetmud/CivicConnect/issues/new?template=city-request.md&title=Something+wrong+with+budget+data&body=**What+needs+updating:**%0A%0A**City+searched:**%0A%0A**Details:**" target="_blank">Something wrong? Recommend an update ↗</a>
