@@ -1353,6 +1353,8 @@
       let lat = selectedLat;
       let lon = selectedLon;
 
+      let geocodedCity = selectedCity;
+
       if (!lat || !lon) {
         const geoUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
         const geoRes = await fetch(geoUrl);
@@ -1364,6 +1366,7 @@
         }
         lat = geoData.results[0].lat;
         lon = geoData.results[0].lon;
+        geocodedCity = geoData.results[0].city || geoData.results[0].county || address;
       }
 
       // ── Profile card ──
@@ -1375,12 +1378,8 @@
       // Init map immediately at coords
       initMap(lat, lon);
 
-      // Init budget — use stored city from autocomplete, or geocoded city, or raw address
-      const detectedCity = selectedCity
-        || geoData?.results?.[0]?.city
-        || geoData?.results?.[0]?.county
-        || address;
-      initBudgetTab(detectedCity);
+      // Init budget with detected city
+      initBudgetTab(geocodedCity || address);
 
       // Fetch ward boundary in parallel with everything else
       const [wardResult] = await Promise.all([
