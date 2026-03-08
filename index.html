@@ -100,6 +100,157 @@
       flex-shrink: 0;
     }
 
+    .btn-about, .btn-donate {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-about:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-donate {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+    .btn-donate:hover {
+      background: var(--accent);
+      color: #0e0f0c;
+      border-color: var(--accent);
+    }
+
+    /* ── About modal ─────────────────────────────────── */
+    .about-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .about-backdrop.open { display: flex; }
+    .about-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 520px;
+      width: calc(100% - 2rem);
+      position: relative;
+      animation: fadeUp 0.25s ease both;
+    }
+    .about-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .about-close:hover { color: var(--text); }
+    .about-box h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+    .about-box h2 em { font-style: italic; color: var(--accent); }
+    .about-byline {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.25rem;
+    }
+    .about-body p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 0.9rem;
+    }
+    .about-body p:last-child { margin-bottom: 0; }
+    .about-body strong { color: var(--text); }
+    .about-links {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .about-links a {
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--accent-dim);
+      padding: 0.3rem 0.7rem;
+      border-radius: 20px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .about-links a:hover {
+      background: var(--accent);
+      color: #0e0f0c;
+    }
+
+    /* ── API key modal ────────────────────────────────── */
+    .apikey-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .apikey-backdrop.open { display: flex; }
+    .apikey-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 460px;
+      width: calc(100% - 2rem);
+      animation: fadeUp 0.25s ease both;
+    }
+    .apikey-box h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+    .apikey-box p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 1rem;
+    }
+    .apikey-box input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      margin-bottom: 0.75rem;
+    }
+    .apikey-box input:focus { outline: none; border-color: var(--accent); }
+    .apikey-actions { display: flex; gap: 0.5rem; }
+    .apikey-note {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+    }
+
     .theme-toggle {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -1010,6 +1161,8 @@
   <span class="logo">CivicConnect</span>
   <div class="header-right">
     <span class="tagline">Know who represents you 🍁</span>
+    <button class="btn-about" onclick="openAbout()">About</button>
+    <a class="btn-donate" href="https://ko-fi.com/wetmud" target="_blank" rel="noopener">☕ Support</a>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
       <span class="theme-icon">☀️</span>
     </button>
@@ -1132,11 +1285,109 @@
   </div>
 </div>
 
+<!-- About Modal -->
+<div class="about-backdrop" id="about-backdrop" onclick="closeAbout(event)">
+  <div class="about-box">
+    <button class="about-close" onclick="closeAbout()">✕</button>
+    <h2>About <em>CivicConnect</em></h2>
+    <div class="about-byline">A free civic engagement tool for Canadians</div>
+    <div class="about-body">
+      <p>
+        I built CivicConnect because I got tired of not knowing who actually represents me. City councillor, regional rep, MPP — they're all out there, but finding them and reaching out felt harder than it should be. This tool fixes that.
+      </p>
+      <p>
+        Enter your address and instantly see every elected official who represents you, get a map of your ward, explore your city's budget in plain English, and draft a real email to your rep — all in under two minutes, with <strong>zero data collected about you</strong>.
+      </p>
+      <p>
+        It's free, open-source, and built to stay that way. If you find it useful, consider buying me a coffee — it helps cover the small API costs and keeps me motivated to expand coverage beyond Ontario.
+      </p>
+      <p style="font-size:0.75rem; color:var(--text-muted)">
+        Built by a Canadian who wanted their city to work better. Currently covering 8 Ontario cities, with more on the way.
+      </p>
+    </div>
+    <div class="about-links">
+      <a href="https://github.com/wetmud/CivicConnect" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="https://ko-fi.com/wetmud" target="_blank" rel="noopener">☕ Buy me a coffee</a>
+      <a href="https://github.com/wetmud/CivicConnect/issues/new" target="_blank" rel="noopener">Report a bug ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="apikey-backdrop" id="apikey-backdrop">
+  <div class="apikey-box">
+    <h3>Enter your Anthropic API key</h3>
+    <p>
+      AI features (email drafting &amp; budget summaries) require an Anthropic API key. Your key is stored only in this browser session and is never sent anywhere except directly to Anthropic's servers.
+    </p>
+    <input type="password" id="apikey-input" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="apikey-actions">
+      <button class="btn-primary" onclick="saveApiKey()">Save &amp; Continue →</button>
+      <button class="btn-outline" onclick="closeApiKeyModal()">Cancel</button>
+    </div>
+    <div class="apikey-note">
+      Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Usage is pay-per-use — a few dollars goes a long way.
+    </div>
+  </div>
+</div>
+
 <footer>
   Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒 No data collected, ever
 </footer>
 
 <script>
+  // ── About modal ───────────────────────────────────────────
+  function openAbout() { document.getElementById('about-backdrop').classList.add('open'); }
+  function closeAbout(e) {
+    if (!e || e.target === document.getElementById('about-backdrop')) {
+      document.getElementById('about-backdrop').classList.remove('open');
+    }
+  }
+
+  // ── API key (BYOK) ────────────────────────────────────────
+  // Key lives in sessionStorage only — gone when tab closes.
+  let _pendingAiCallback = null;
+
+  function getApiKey() { return sessionStorage.getItem('cc_apikey') || ''; }
+
+  function requireApiKey(cb) {
+    if (getApiKey()) { cb(); return; }
+    _pendingAiCallback = cb;
+    document.getElementById('apikey-backdrop').classList.add('open');
+    setTimeout(() => document.getElementById('apikey-input').focus(), 50);
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apikey-input').value.trim();
+    if (!key.startsWith('sk-ant-')) {
+      alert('That doesn\'t look like a valid Anthropic API key (should start with sk-ant-).');
+      return;
+    }
+    sessionStorage.setItem('cc_apikey', key);
+    closeApiKeyModal();
+    if (_pendingAiCallback) { _pendingAiCallback(); _pendingAiCallback = null; }
+  }
+
+  function closeApiKeyModal() {
+    document.getElementById('apikey-backdrop').classList.remove('open');
+    document.getElementById('apikey-input').value = '';
+    _pendingAiCallback = null;
+  }
+
+  document.getElementById('apikey-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveApiKey();
+    if (e.key === 'Escape') closeApiKeyModal();
+  });
+
+  function claudeHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+  }
+
   // ── Privacy banner ───────────────────────────────────────
   function dismissPrivacy() {
     const banner = document.getElementById('privacy-banner');
@@ -1587,6 +1838,10 @@
 
   async function generateEmail() {
     if (!currentRep) return;
+    requireApiKey(() => _doGenerateEmail());
+  }
+
+  async function _doGenerateEmail() {
     const issue = document.getElementById('issue-select').value;
     const detail = document.getElementById('issue-detail').value;
     const aiStatus = document.getElementById('ai-status');
@@ -1602,7 +1857,7 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: claudeHeaders(),
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1000,
@@ -2127,9 +2382,15 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
   "breakdown": "3-5 bullet points, each on its own line starting with •"
 }`;
 
+      if (!getApiKey()) {
+        requireApiKey(() => toggleBudgetCard(btn, idx));
+        bubble.classList.remove('open');
+        btn.classList.remove('open');
+        return;
+      }
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: claudeHeaders(),
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 400,
@@ -2176,11 +2437,16 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
 
   // ── Budget recommendation email ──────────────────────────
   async function draftBudgetEmail() {
+    const detail = document.getElementById('rec-detail').value;
+    if (!detail.trim()) { alert('Please describe your recommendation first.'); return; }
+    requireApiKey(() => _doDraftBudgetEmail());
+  }
+
+  async function _doDraftBudgetEmail() {
     const category = document.getElementById('rec-category').value;
     const detail = document.getElementById('rec-detail').value;
     const status = document.getElementById('rec-ai-status');
     const preview = document.getElementById('rec-email-preview');
-    if (!detail.trim()) { alert('Please describe your recommendation first.'); return; }
 
     status.classList.add('visible');
     preview.style.display = 'none';
@@ -2197,7 +2463,7 @@ Keep it under 120 words. Start with "Subject: " on the first line. End with "A $
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: claudeHeaders(),
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 400,
