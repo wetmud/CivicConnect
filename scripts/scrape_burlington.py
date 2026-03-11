@@ -75,7 +75,7 @@ def fetch_recent_meetings(limit: int = 5) -> list[dict]:
     from playwright.sync_api import sync_playwright
 
     print("Fetching meetings via headless browser (JS-rendered calendar)...")
-    uuids: list[str] = []
+    meetings_seen: dict[str, dict] = {}  # uuid → {id, title, date}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -85,71 +85,119 @@ def fetch_recent_meetings(limit: int = 5) -> list[dict]:
         # Load calendar and wait for meeting links to render
         page.goto(CALENDAR_URL, wait_until="networkidle", timeout=30000)
 
-        # Collect all hrefs containing meeting UUIDs from the rendered DOM
-        links = page.eval_on_selector_all(
+        # Extract UUID + visible link text in one JS pass — the calendar renders
+        # anchor text like "Regular Meeting of Council\nJanuary 14, 2025"
+        link_data = page.eval_on_selector_all(
             "a[href]",
-            "els => els.map(e => e.getAttribute('href'))"
+            "els => els.map(e => ({ href: e.getAttribute('href'), text: e.innerText }))"
         )
-        for href in links:
-            m = UUID_RE.search(href or "")
-            if m and m.group(1) not in uuids:
-                uuids.append(m.group(1))
+        for item in link_data:
+            href = item.get("href") or ""
+            text = (item.get("text") or "").strip()
+            m = UUID_RE.search(href)
+            if not m:
+                continue
+            uid = m.group(1)
+            if uid in meetings_seen:
+                continue
+            date_str = _parse_date_from_text(text)
+            title = text.split("\n")[0].strip() or "Burlington City Council"
+            if date_str:
+                meetings_seen[uid] = {"id": uid, "title": title, "date": date_str}
+                print(f"    ✓ {title} | {date_str}")
+            else:
+                # Store without date for fallback resolution
+                meetings_seen[uid] = {"id": uid, "title": title, "date": None}
 
-        # Also scan full rendered HTML for UUIDs in JS-injected content
+        # Fallback: scan raw HTML for any UUIDs we missed (JS-injected content)
         html = page.content()
         for m in UUID_RE.finditer(html):
-            if m.group(1) not in uuids:
-                uuids.append(m.group(1))
+            uid = m.group(1)
+            if uid not in meetings_seen:
+                meetings_seen[uid] = {"id": uid, "title": "Burlington City Council", "date": None}
 
         browser.close()
 
-    print(f"  Found {len(uuids)} meeting UUID(s) in calendar.")
+    print(f"  Found {len(meetings_seen)} meeting UUID(s) in calendar.")
 
-    # Resolve dates by fetching each meeting page (static HTML, no JS needed)
-    meetings = []
-    for uid in uuids[:limit * 2]:
-        date_str, title = _fetch_meeting_meta(uid)
+    # For any meetings where Playwright text didn't yield a date, fall back to
+    # fetching the static meeting page (title tag often has a parseable date)
+    dateless = [v for v in meetings_seen.values() if not v["date"]]
+    print(f"  {len(meetings_seen) - len(dateless)} with dates from calendar; "
+          f"{len(dateless)} need fallback resolution...")
+
+    for entry in dateless:
+        date_str, title = _fetch_meeting_meta(entry["id"])
         if date_str:
-            meetings.append({"id": uid, "title": title, "date": date_str})
-        if len(meetings) >= limit:
-            break
+            entry["date"] = date_str
+            entry["title"] = title
+            print(f"    ✓ (fallback) {title} | {date_str}")
 
-    meetings.sort(key=lambda x: x["date"], reverse=True)
-    result = meetings[:limit]
+    # Keep only meetings with resolved dates, sort newest-first
+    dated = [v for v in meetings_seen.values() if v["date"]]
+    dated.sort(key=lambda x: x["date"], reverse=True)
+    result = dated[:limit]
     print(f"  Resolved {len(result)} meetings with dates.")
     return result
 
+# Date patterns that appear in eSCRIBE calendar link text
+_DATE_PATTERNS = [
+    (re.compile(r"\b(\w+ \d{1,2},\s*\d{4})\b"), "%B %d, %Y"),   # January 14, 2025
+    (re.compile(r"\b(\d{4}-\d{2}-\d{2})\b"),      "%Y-%m-%d"),   # 2025-01-14
+    (re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4})\b"),  "%m/%d/%Y"),   # 01/14/2025
+    (re.compile(r"\b(\d{1,2}-\w{3}-\d{4})\b"),    "%d-%b-%Y"),   # 14-Jan-2025
+]
+
+def _parse_date_from_text(text: str) -> str | None:
+    """Scan arbitrary text for a recognisable date and return YYYY-MM-DD."""
+    # Try /Date(ms)/ first
+    m = re.search(r"/Date\((\d+)", text)
+    if m:
+        ts = int(m.group(1)) / 1000
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+    for pattern, fmt in _DATE_PATTERNS:
+        for raw in pattern.findall(text):
+            raw_clean = re.sub(r"\s+", " ", raw).strip()
+            try:
+                return datetime.strptime(raw_clean, fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+    return None
+
 def _fetch_meeting_meta(meeting_id: str) -> tuple[str | None, str]:
-    """Fetches the meeting page and extracts date + title from static HTML."""
+    """Fetches the meeting page (static HTML) and extracts date + title.
+    Used as a fallback when the calendar link text doesn't contain a parseable date."""
     try:
         url = f"{MEETING_PAGE}?Id={meeting_id}&Agenda=PostMinutes&lang=English"
         resp = get(url)
         soup = BeautifulSoup(resp.text, "html.parser")
-        title_el = soup.find("title") or soup.find("h1") or soup.find("h2")
-        raw = title_el.get_text(" ", strip=True) if title_el else ""
-        date_str = _parse_date(raw)
-        # Fallback: scan all text on the page for a recognisable date
-        if not date_str:
-            date_str = _parse_date(soup.get_text(" ", strip=True)[:2000])
-        title = raw.split("|")[0].strip() if raw else "Burlington City Council"
-        return date_str, title or "Burlington City Council"
+
+        # Grab all candidate text elements in priority order
+        candidates: list[str] = []
+        for tag in ("title", "h1", "h2", "h3"):
+            el = soup.find(tag)
+            if el:
+                candidates.append(el.get_text(" ", strip=True))
+        # Also try the first 3000 chars of page text as a last resort
+        candidates.append(soup.get_text(" ", strip=True)[:3000])
+
+        date_str: str | None = None
+        title = "Burlington City Council"
+        for raw in candidates:
+            if not date_str:
+                date_str = _parse_date_from_text(raw)
+            if raw and title == "Burlington City Council":
+                candidate_title = raw.split("|")[0].strip()
+                if candidate_title:
+                    title = candidate_title
+            if date_str and title != "Burlington City Council":
+                break
+
+        return date_str, title
     except Exception as e:
         print(f"    ⚠️  Could not resolve meta for {meeting_id}: {e}")
         return None, "Burlington City Council"
 
-def _parse_date(raw: str) -> str | None:
-    """Converts various date formats to YYYY-MM-DD, or None if unparseable."""
-    # Handle /Date(1234567890000)/ format
-    m = re.search(r"/Date\((\d+)", raw)
-    if m:
-        ts = int(m.group(1)) / 1000
-        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
-    for fmt in ("%Y-%m-%d", "%B %d, %Y", "%d/%m/%Y", "%m/%d/%Y"):
-        try:
-            return datetime.strptime(raw.strip(), fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-    return None
 
 # ── Step 2: Check if already summarised ──────────────────────────────────────
 

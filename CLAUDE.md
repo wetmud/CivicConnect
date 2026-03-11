@@ -9,14 +9,26 @@ Free, open-source civic engagement tool for Canadians. Enter an address → get 
 
 ## Architecture
 
-Everything lives in `index.html`. No build process. Deploy by pushing to GitHub Pages.
+Frontend lives in `index.html`. No build process. Deploy by pushing to GitHub Pages.
+Meeting summarizer is a Python scraper + GitHub Actions pipeline that commits static JSON.
 
 ```
-index.html
-├── <head>        — CSP, meta, Google Fonts, Leaflet CSS/JS CDN
-├── <style>       — All CSS (CSS custom properties for theming)
-├── <body>        — All HTML markup
-└── <script>      — All JavaScript (inline, ~2200 lines)
+index.html                          — All frontend (HTML + CSS + JS, ~2600 lines)
+├── <head>                          — CSP, meta, Google Fonts, Leaflet CSS/JS CDN
+├── <style>                         — All CSS (CSS custom properties for theming)
+├── <body>                          — All HTML markup
+└── <script>                        — All JavaScript (inline)
+
+scripts/
+└── scrape_burlington.py            — Meeting scraper (Playwright + pdfplumber + Claude)
+
+.github/workflows/
+└── burlington-meetings.yml         — Cron: every Tuesday 10 UTC, auto-commits summaries
+
+meetings/burlington/
+├── index.json                      — Array of date strings, newest-first (auto-generated)
+├── {YYYY-MM-DD}.json               — Individual meeting summary (auto-generated)
+└── .gitkeep                        — Placeholder (no summaries generated yet — see Known Issues)
 ```
 
 **Brand palette (current):**
@@ -33,10 +45,11 @@ Old lime-green palette is commented out directly above the active `:root` block 
 |-----|---------|-------------|
 | Geoapify | Address autocomplete + geocoding + nearby places | `const GEOAPIFY_KEY` (~line 1148) |
 | Represent (OpenNorth) | Canadian rep data + ward boundaries | No key required |
-| Anthropic Claude | Email drafting + budget summaries | User-provided via session modal |
+| Anthropic Claude | Email drafting + budget summaries + meeting summarization | User-provided via session modal (frontend); `ANTHROPIC_API_KEY` GitHub Secret (scraper) |
 | corsproxy.io | CORS proxy for Represent API | Hardcoded URL — replace before production |
 | Wikipedia REST API | Rep bio lookup in profile modal | No key required (`origin=*` for CORS) |
 | OpenParliament.ca API | Federal MP voting records | No key required — open civic data |
+| Burlington eSCRIBE portal | Council meeting minutes (JS-rendered calendar + PDF documents) | No key required; SSL verify disabled in scraper |
 
 **Claude model in use:** `claude-sonnet-4-20250514`
 
@@ -60,6 +73,10 @@ Old lime-green palette is commented out directly above the active `:root` block 
 | Budget tab init/render | ~2022 | City detection by address string match — **re-enable by un-commenting tab + panel** |
 | Budget card AI summary | ~2100 | Claude call; JSON parse; session cache |
 | Budget email draft | ~2178 | Claude call; same pattern as rep email |
+| Meetings tab + panel | ~1737 | "Council Meetings" tab; `loadMeetings()` fetches static JSON from `meetings/burlington/` |
+| Meeting card rendering | ~2286 | `buildMeetingCard()` — collapsible cards with time bar, items table, outcome badges |
+| Meeting share on X | ~2431 | `shareMeetingOnX()` — Twitter Web Intent, 280-char pre-filled tweet |
+| Meeting CSS | ~788 | `.meeting-card`, `.meeting-outcome` badges, `.meeting-time-bar`, fadeUp animation |
 
 ---
 
@@ -109,6 +126,8 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 | No ARIA roles on modal | Low | Add `role="dialog"`, `aria-modal`, focus trap |
 | OpenParliament slug matching | Low | `toOpenParliamentSlug()` handles accents but may miss unusual names; test edge cases |
 | Budget city detection is naive string match | Low | Improve with geocoded city name normalization |
+| Meeting scraper date parsing broken | High | eSCRIBE calendar renders 10 UUIDs but `_parse_date_from_text()` resolves 0 dates — format likely changed. Add debug logging, fix parser. |
+| eSCRIBE SSL cert not trusted in CI | Medium | `SSL_VERIFY = False` in scraper — works but not ideal |
 
 ---
 
@@ -127,12 +146,11 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 - [ ] Expand budget coverage beyond 8 Ontario cities
 
 **Meeting Summarizer (Burlington pilot → scale):**
-- [ ] **Phase 1:** GitHub Actions cron → scrape Burlington council minutes (burlington.ca/en/council-and-city-administration/agendas-and-minutes.aspx) → send to Claude → commit structured JSON summary to `/meetings/burlington/`
-- [ ] **Phase 2:** "Meetings" tab on site — fetch and render summaries from static JSON
-- [ ] **Phase 3:** "Share on X" button — Twitter Web Intent pre-filled with 280-char summary + link (no API key needed)
+- [x] **Phase 1:** GitHub Actions cron → scrape Burlington council minutes via eSCRIBE portal → extract PDF text → Claude summarization → commit JSON to `/meetings/burlington/` (March 2026)
+- [x] **Phase 2:** "Council Meetings" tab on site — fetches `index.json` + per-date summary JSONs, renders collapsible cards with time bars, items table, outcome badges (March 2026)
+- [x] **Phase 3:** "Share on X" button — Twitter Web Intent pre-filled with 280-char summary + hashtags (March 2026)
+- [ ] **Phase 1 bug — scraper date parsing broken:** Playwright finds 10 meeting UUIDs from eSCRIBE calendar but resolves 0 dates. `_parse_date_from_text()` fails on all link text, and `_fetch_meeting_meta()` fallback also fails. Likely the calendar changed its date rendering format. **No summaries have been generated yet.** Next step: add debug logging to print raw link text, then fix date parsing to match current format.
 - [ ] **Phase 4:** Scale to other cities — each needs a data-source adapter (Burlington uses in-house video system, not YouTube; Toronto has Open Data API + YouTube)
-- Burlington data: minutes posted within 24h at the agendas URL above; no YouTube channel confirmed — videos hosted on-site. May need to scrape HTML minutes rather than transcribe video.
-- Summary format goal: journalist-style breakdown — agenda items, time per item, decisions (passed/failed/deferred), items rescheduled, "productive time" vs procedural, plain-English TL;DR
 - Toronto is better-resourced for Phase 4 (Open Data API + YouTube + vote CSV download)
 
 **Longer-term:**
@@ -177,4 +195,7 @@ If a managed version with a shared API key is offered later, cost-per-user is lo
 - **Rep profile modal** (`#rep-profile-backdrop`): opens on any rep card click. Two-column layout — photo/actions left, Wikipedia bio + offices right. `wikiCache` (in-memory, keyed by `rep.name`) prevents redundant API calls. Fails silently if Wikipedia has no article. Uses DOM methods only (no `innerHTML`) for bio text — XSS safe.
 - **Support modal** (`#support-backdrop`): triggered by "☕ Support" header button. Ko-fi link: `ko-fi.com/jasonsteltman`. Tiers: $5/$10/$25/$50 CAD. Recommend Feature button links to GitHub issues. No Stripe, no backend.
 - **Budget tab is commented out** — search for `<!-- BUDGET TAB:` and `<!-- BUDGET PANEL:` to re-enable. All JS + data is intact.
+- **Meeting scraper pipeline** (`scripts/scrape_burlington.py`): Playwright loads JS-rendered eSCRIBE calendar → extracts meeting UUIDs from `Meeting.aspx?Id=` links → parses dates from link text (4 format patterns + `/Date(ms)/` fallback) → fetches meeting page for minutes PDF link → `pdfplumber` extracts text → Claude (`claude-sonnet-4-20250514`) produces journalist-style JSON summary → writes to `meetings/burlington/{date}.json` + updates `index.json`. GitHub Actions runs every Tuesday 10 UTC and auto-commits.
+- **Meeting scraper polite rate limiting**: `REQUEST_DELAY = 2` seconds between requests. `User-Agent: CivicConnect/1.0`. eSCRIBE base: `burlingtonpublishing.escribemeetings.com`.
+- **Meeting frontend**: `loadMeetings()` fires on first tab switch (cached via `_meetingsLoaded`). Fetches `meetings/burlington/index.json` → parallel-loads all date JSONs → `buildMeetingCard()` renders collapsible cards. Currently shows "Meeting summaries coming soon..." because no JSON files exist yet.
 - **Voting record section** in rep profile modal: only visible for federal reps (`isFederal()` check). `toOpenParliamentSlug("Jane Smith")` → `"smith-jane"`. API endpoint: `GET https://api.openparliament.ca/votes/?politician_slug={slug}&format=json&limit=10`. Results paginated via `loadMoreVotes()` (offset increments by 10). Cache in `votingCache` (keyed by slug). Fails silently — hides section if API unreachable or slug not found. Vote descriptions are bilingual objects `{en: "...", fr: "..."}` — always use `.en` field.

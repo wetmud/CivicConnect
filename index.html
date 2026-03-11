@@ -1734,7 +1734,8 @@
     <div class="tabs" id="search-tabs">
       <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
       <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
-      <button class="tab-btn" data-short="Meetings" onclick="switchTab('meetings', this)"><span class="tab-long">Council Meetings</span></button>
+      <!-- MEETINGS TAB: re-enable once scraper date parsing is fixed and summaries exist -->
+      <!-- <button class="tab-btn" data-short="Meetings" onclick="switchTab('meetings', this)"><span class="tab-long">Council Meetings</span></button> -->
       <!-- BUDGET TAB: re-enable by removing comment -->
       <!-- <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button> -->
       <!-- FEDERAL TAB (saved for later): <button class="tab-btn" onclick="switchTab('federal', this)">Federal</button> -->
@@ -1745,9 +1746,10 @@
     <div class="tab-panel" id="tab-services">
       <div id="results-services"></div>
     </div>
-    <div class="tab-panel" id="tab-meetings">
+    <!-- MEETINGS PANEL: re-enable once scraper date parsing is fixed and summaries exist -->
+    <!-- <div class="tab-panel" id="tab-meetings">
       <div id="results-meetings"><div class="loading"><div class="spinner"></div>Loading meeting summaries…</div></div>
-    </div>
+    </div> -->
     <!-- BUDGET PANEL: re-enable by removing comment -->
     <!-- <div class="tab-panel" id="tab-budget">
       <div class="budget-meta">
