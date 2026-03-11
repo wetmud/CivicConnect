@@ -133,14 +133,19 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 
 ## Roadmap
 
-**Immediate (before production):**
-- [ ] Cloudflare Worker proxy for Geoapify key
-- [ ] Replace corsproxy.io with own proxy
-- [ ] Custom domain (civicreach.ca)
-- [ ] BYOK modal polish + error states
+> Full launch plan with rationale in `LAUNCH_PLAN.txt`.
 
-**Near-term features:**
+**LAUNCH BLOCKERS (must do before sharing):**
+- [ ] Cloudflare Worker proxy for Geoapify key + corsproxy.io replacement (one Worker, two routes)
+- [ ] Social sharing meta tags (`og:*`, `twitter:card`, `meta description`)
+- [ ] Favicon
+
+**Post-launch (informed by user feedback):**
 - [x] MP voting tracker — OpenParliament.ca, shown in rep profile modal (March 2026)
+- [ ] Custom domain (civicreach.ca)
+- [ ] Fix meeting scraper → uncomment Meetings tab
+- [ ] Re-enable Budget tab (data + UI built, just commented out)
+- [ ] Replace `alert()` with toast notifications
 - [ ] Mobile layout polish
 - [ ] Share representative info via URL
 - [ ] Expand budget coverage beyond 8 Ontario cities
