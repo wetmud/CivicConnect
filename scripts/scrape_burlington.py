@@ -46,27 +46,49 @@ REQUEST_TIMEOUT = 30
 REQUEST_DELAY   = 2   # seconds between HTTP requests — be polite
 SSL_VERIFY      = False  # eSCRIBE cert chain not trusted by GH Actions runner
 
+CALENDAR_URL = f"{ESCRIBE_BASE}/MeetingsCalendarView.aspx"
+
 HEADERS = {
     "User-Agent": "CivicConnect/1.0 (civic engagement tool; github.com/wetmud/CivicConnect)",
     "Accept": "application/json, text/html, */*",
 }
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Session ───────────────────────────────────────────────────────────────────
+# eSCRIBE uses ASP.NET WebMethods that require a valid session cookie and
+# specific headers. We establish the session by loading the calendar page first.
+
+_session: requests.Session | None = None
+
+def get_session() -> requests.Session:
+    global _session
+    if _session is not None:
+        return _session
+    s = requests.Session()
+    s.verify = SSL_VERIFY
+    s.headers.update(HEADERS)
+    print("  Establishing eSCRIBE session...")
+    time.sleep(REQUEST_DELAY)
+    s.get(CALENDAR_URL, timeout=REQUEST_TIMEOUT)  # sets ASP.NET session cookie
+    _session = s
+    return s
 
 def get(url: str, **kwargs) -> requests.Response:
     time.sleep(REQUEST_DELAY)
-    r = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT, verify=SSL_VERIFY, **kwargs)
+    r = get_session().get(url, timeout=REQUEST_TIMEOUT, **kwargs)
     r.raise_for_status()
     return r
 
 def post_json(url: str, payload: dict) -> dict:
     time.sleep(REQUEST_DELAY)
-    r = requests.post(
+    r = get_session().post(
         url,
-        headers={**HEADERS, "Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": CALENDAR_URL,
+        },
         json=payload,
         timeout=REQUEST_TIMEOUT,
-        verify=SSL_VERIFY,
     )
     r.raise_for_status()
     return r.json()
