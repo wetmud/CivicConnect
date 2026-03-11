@@ -2210,7 +2210,7 @@
         : '';
       const socialHtml = buildSocialLinks(rep);
       html += `
-        <div class="rep-card" style="animation-delay:${i * 0.06}s">
+        <div class="rep-card" style="animation-delay:${i * 0.06}s;cursor:pointer" onclick='openRepProfile(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>
           <div class="rep-card-header">
             ${photoHtml}
             <div class="rep-info">
@@ -2221,9 +2221,9 @@
           </div>
           ${socialHtml}
           <div class="rep-actions">
-            ${email ? `<button class="btn-primary" onclick='openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>&#9993; Write Email</button>` : ''}
-            ${rep.url ? `<a class="btn-outline" href="${escAttr(rep.url)}" target="_blank">&#8599; Profile</a>` : ''}
-            <button class="btn-outline" onclick="copyInfo('${escAttr(rep.name)}', '${escAttr(email)}')">Copy Info</button>
+            ${email ? `<button class="btn-primary" onclick='event.stopPropagation();openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>&#9993; Write Email</button>` : ''}
+            ${rep.url ? `<a class="btn-outline" href="${escAttr(rep.url)}" target="_blank" onclick="event.stopPropagation()">&#8599; Profile</a>` : ''}
+            <button class="btn-outline" onclick="event.stopPropagation();copyInfo('${escAttr(rep.name)}', '${escAttr(email)}')">Copy Info</button>
           </div>
         </div>`;
     });
