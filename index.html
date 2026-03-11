@@ -2676,7 +2676,7 @@
       const url = 'https://api.openparliament.ca/votes/?politician_slug='
         + encodeURIComponent(slug) + '&format=json&limit=10';
       const res = await Promise.race([
-        fetch(url),
+        fetch(CORS_PROXY + encodeURIComponent(url)),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
       ]);
       const data = await res.json();
@@ -2703,7 +2703,7 @@
     try {
       const url = 'https://api.openparliament.ca/votes/?politician_slug='
         + encodeURIComponent(slugSnapshot) + '&format=json&limit=10&offset=' + _votesOffset;
-      const res = await fetch(url);
+      const res = await fetch(CORS_PROXY + encodeURIComponent(url));
       const data = await res.json();
       if (_currentVoteSlug !== slugSnapshot) return; // rep changed while fetching
       renderVotes(bodyEl, moreBtn, data, true);
