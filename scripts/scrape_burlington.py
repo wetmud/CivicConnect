@@ -332,7 +332,7 @@ def main():
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    meetings = fetch_recent_meetings(page_size=5)
+    meetings = fetch_recent_meetings(limit=5)
     if not meetings:
         print("No meetings returned — the eSCRIBE API response format may have changed.")
         sys.exit(0)
