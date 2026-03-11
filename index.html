@@ -9,7 +9,7 @@
     script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
     font-src https://fonts.gstatic.com;
-    img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
+    img-src 'self' data: https: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
     connect-src 'self' https://api.geoapify.com https://represent.opennorth.ca https://corsproxy.io https://api.anthropic.com;
     frame-ancestors 'none';
   "/>
@@ -22,6 +22,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* OLD DESIGN — revert by swapping comment blocks
     :root {
       --bg: #0e0f0c;
       --surface: #161713;
@@ -44,6 +45,35 @@
       --text-muted: #6a6b62;
       --danger: #cc4422;
       --profile-bg: #eeeee8;
+    }
+    END OLD DESIGN */
+
+    :root {
+      --bg: #0e0f0c;
+      --surface: #1a1419;
+      --border: #2e2830;
+      --accent: #ffb963;
+      --accent-dim: #e09840;
+      --accent2: #682FED;
+      --on-accent: #0e0f0c;
+      --text: #f5f5f0;
+      --text-muted: #8a8070;
+      --danger: #ff6b4a;
+      --profile-bg: #130f12;
+    }
+
+    :root.light {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --border: #e0d8e8;
+      --accent: #682FED;
+      --accent-dim: #8252f0;
+      --accent2: #ffb963;
+      --on-accent: #ffffff;
+      --text: #1a1412;
+      --text-muted: #6a6060;
+      --danger: #cc4422;
+      --profile-bg: #f0ecf8;
     }
 
     body {
@@ -122,7 +152,7 @@
     }
     .btn-donate:hover {
       background: var(--accent);
-      color: #0e0f0c;
+      color: var(--on-accent);
       border-color: var(--accent);
     }
 
@@ -197,7 +227,7 @@
     }
     .about-links a:hover {
       background: var(--accent);
-      color: #0e0f0c;
+      color: var(--on-accent);
     }
 
     /* ── API key modal ────────────────────────────────── */
@@ -367,13 +397,13 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #0e0f0c;
+      color: var(--on-accent);
       cursor: pointer;
       transition: background 0.2s, transform 0.1s;
       white-space: nowrap;
     }
 
-    #search-btn:hover { background: #d4f55a; }
+    #search-btn:hover { background: var(--accent-dim); color: var(--on-accent); }
     #search-btn:active { transform: scale(0.97); }
     #search-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
@@ -534,21 +564,36 @@
     .rep-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 0.75rem;
+      border-radius: 16px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 0.85rem;
       animation: fadeUp 0.4s ease both;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     }
 
-    .rep-card:hover { border-color: var(--accent-dim); }
+    .rep-card:hover {
+      border-color: var(--accent-dim);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px var(--accent-dim);
+      transform: translateY(-2px);
+    }
 
     .rep-level {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       text-transform: uppercase;
       letter-spacing: 0.14em;
       color: var(--accent);
-      margin-bottom: 0.35rem;
+      background: rgba(255, 185, 99, 0.1);
+      border: 1px solid rgba(255, 185, 99, 0.22);
+      border-radius: 20px;
+      padding: 0.15rem 0.65rem;
+      display: inline-block;
+      margin-bottom: 0.45rem;
+    }
+
+    :root.light .rep-level {
+      background: rgba(104, 47, 237, 0.08);
+      border-color: rgba(104, 47, 237, 0.2);
     }
 
     .rep-name {
@@ -560,7 +605,63 @@
     .rep-role {
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .rep-card-header {
+      display: flex;
+      gap: 1.1rem;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .rep-photo {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center 15%;
+      border: 2.5px solid var(--accent);
+      flex-shrink: 0;
+      background: var(--profile-bg);
+      box-shadow:
+        0 0 0 4px rgba(255, 185, 99, 0.15),
+        0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    :root.light .rep-photo {
+      box-shadow:
+        0 0 0 4px rgba(104, 47, 237, 0.12),
+        0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .rep-info { flex: 1; min-width: 0; }
+
+    .rep-social {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.85rem;
+    }
+
+    .rep-social a {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.2rem 0.65rem;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .rep-social a:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(255, 185, 99, 0.08);
+    }
+
+    :root.light .rep-social a:hover {
+      background: rgba(104, 47, 237, 0.07);
     }
 
     .rep-actions {
@@ -570,11 +671,12 @@
     }
 
     @media (max-width: 480px) {
-      .rep-card { padding: 1rem 1.1rem; }
+      .rep-card { padding: 1.1rem 1.2rem; border-radius: 12px; }
       .rep-actions { flex-direction: column; gap: 0.4rem; }
       .rep-actions .btn-outline,
       .rep-actions .btn-primary { text-align: center; width: 100%; }
       .rep-name { font-size: 1.1rem; }
+      .rep-photo { width: 52px; height: 52px; }
     }
 
     .services-section { margin-bottom: 1.75rem; }
@@ -624,10 +726,10 @@
       color: var(--accent);
       white-space: nowrap;
       margin-left: 1rem;
-      background: rgba(200, 240, 74, 0.08);
-      border: 1px solid rgba(200, 240, 74, 0.2);
-      padding: 0.2rem 0.55rem;
-      border-radius: 3px;
+      background: rgba(255, 185, 99, 0.08);
+      border: 1px solid rgba(255, 185, 99, 0.2);
+      padding: 0.2rem 0.65rem;
+      border-radius: 20px;
       flex-shrink: 0;
     }
 
@@ -636,13 +738,13 @@
       font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      padding: 0.4rem 0.9rem;
+      padding: 0.4rem 1rem;
       border: 1px solid var(--border);
       background: transparent;
       color: var(--text);
-      border-radius: 3px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
       text-decoration: none;
       display: inline-block;
     }
@@ -654,16 +756,24 @@
       font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      padding: 0.4rem 0.9rem;
+      padding: 0.4rem 1rem;
       border: 1px solid var(--accent);
       background: transparent;
       color: var(--accent);
-      border-radius: 3px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
     }
 
-    .btn-primary:hover { background: var(--accent); color: #0e0f0c; }
+    .btn-primary:hover {
+      background: var(--accent);
+      color: var(--on-accent);
+      box-shadow: 0 4px 14px rgba(255, 185, 99, 0.35);
+    }
+
+    :root.light .btn-primary:hover {
+      box-shadow: 0 4px 14px rgba(104, 47, 237, 0.3);
+    }
 
     .loading {
       text-align: center;
@@ -925,7 +1035,7 @@
     .year-btn.active {
       background: var(--accent);
       border-color: var(--accent);
-      color: #0e0f0c;
+      color: var(--on-accent);
       font-weight: 600;
     }
 
@@ -1216,7 +1326,8 @@
     <div class="tabs" id="search-tabs">
       <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
       <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
-      <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button>
+      <!-- BUDGET TAB: re-enable by removing comment -->
+      <!-- <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button> -->
       <!-- FEDERAL TAB (saved for later): <button class="tab-btn" onclick="switchTab('federal', this)">Federal</button> -->
     </div>
     <div class="tab-panel active" id="tab-reps">
@@ -1225,7 +1336,8 @@
     <div class="tab-panel" id="tab-services">
       <div id="results-services"></div>
     </div>
-    <div class="tab-panel" id="tab-budget">
+    <!-- BUDGET PANEL: re-enable by removing comment -->
+    <!-- <div class="tab-panel" id="tab-budget">
       <div class="budget-meta">
         <span id="budget-city-label">📅 City Budget</span>
         <div class="year-toggle">
@@ -1242,7 +1354,7 @@
       <div class="budget-footer">
         <a class="budget-footer-link" href="https://github.com/wetmud/CivicConnect/issues/new?template=city-request.md&title=Something+wrong+with+budget+data&body=**What+needs+updating:**%0A%0A**City+searched:**%0A%0A**Details:**" target="_blank">Something wrong? Recommend an update ↗</a>
       </div>
-    </div>
+    </div> -->
     <!-- FEDERAL PANEL (saved for later):
     <div class="tab-panel" id="tab-federal"><div id="results-federal"></div></div> -->
 
@@ -1410,7 +1522,7 @@
       wardMap.eachLayer(l => { if (l.options && l.options.attribution) wardMap.removeLayer(l); });
       addMapTiles();
       if (wardLayer) {
-        const accentColor = isDark ? '#c8f04a' : '#5a8a00';
+        const accentColor = isDark ? '#ffb963' : '#682FED';
         wardLayer.setStyle({ color: accentColor, fillColor: accentColor });
       }
     }
@@ -1432,7 +1544,7 @@
     // Pin for searched address
     L.circleMarker([lat, lon], {
       radius: 6,
-      fillColor: '#c8f04a',
+      fillColor: '#ffb963',
       color: '#0e0f0c',
       weight: 2,
       fillOpacity: 1
@@ -1643,7 +1755,7 @@
         document.getElementById('profile-ward-text').textContent = wardResult.name;
         // Draw boundary on map
         if (wardLayer) wardMap.removeLayer(wardLayer);
-        const accentCol = document.documentElement.classList.contains('light') ? '#5a8a00' : '#c8f04a';
+        const accentCol = document.documentElement.classList.contains('light') ? '#682FED' : '#ffb963';
         wardLayer = L.geoJSON(wardResult.geoJson, {
           style: {
             color: accentCol,
@@ -1715,6 +1827,38 @@
   /* FEDERAL (saved for later) — re-enable by splitting repData.objects with isFederal()
      and calling renderRepList('results-federal', federal, 'Federal') */
 
+  // Escape values inserted into HTML attribute positions (href, src, etc.)
+  function escAttr(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function buildSocialLinks(rep) {
+    const extra = rep.extra || {};
+    const links = [];
+    const SOCIAL = [
+      { keys: ['twitter', 'twitter_id', 'twitter_handle'], label: '&#120143; Twitter', base: 'https://twitter.com/' },
+      { keys: ['facebook', 'facebook_id', 'facebook_url'], label: 'f&nbsp;Facebook', base: 'https://facebook.com/' },
+      { keys: ['instagram', 'instagram_handle'], label: '&#9711; Instagram', base: 'https://instagram.com/' },
+      { keys: ['youtube', 'youtube_url'], label: '&#9654; YouTube', base: 'https://youtube.com/' },
+      { keys: ['linkedin', 'linkedin_url'], label: 'in&nbsp;LinkedIn', base: 'https://linkedin.com/in/' },
+    ];
+    for (const { keys, label, base } of SOCIAL) {
+      let val = null;
+      for (const k of keys) { if (extra[k]) { val = String(extra[k]); break; } }
+      if (!val) continue;
+      const href = val.startsWith('http') ? val : base + val.replace(/^@/, '');
+      // Only allow http/https URLs
+      if (!/^https?:\/\//.test(href)) continue;
+      links.push(`<a href="${escAttr(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+    }
+    return links.length ? `<div class="rep-social">${links.join('')}</div>` : '';
+  }
+
   function renderRepList(elId, reps, label) {
     if (!reps.length) {
       document.getElementById(elId).innerHTML = `<div class="error-msg">No ${label.toLowerCase()} representatives found.</div>`;
@@ -1723,15 +1867,26 @@
     let html = `<div class="results-header">${label} — ${reps.length} representative${reps.length !== 1 ? 's' : ''}</div>`;
     reps.forEach((rep, i) => {
       const email = rep.email || '';
+      const photoUrl = rep.photo_url && /^https?:\/\//.test(rep.photo_url) ? rep.photo_url : null;
+      const photoHtml = photoUrl
+        ? `<img class="rep-photo" src="${escAttr(photoUrl)}" alt="${escAttr(rep.name)}" onerror="this.style.display='none'">`
+        : '';
+      const socialHtml = buildSocialLinks(rep);
       html += `
         <div class="rep-card" style="animation-delay:${i * 0.06}s">
-          <div class="rep-level">${rep.representative_set_name || 'Government'}</div>
-          <div class="rep-name">${rep.name}</div>
-          <div class="rep-role">${rep.elected_office}${rep.party_name ? ' · ' + rep.party_name : ''}</div>
+          <div class="rep-card-header">
+            ${photoHtml}
+            <div class="rep-info">
+              <div class="rep-level">${rep.representative_set_name || 'Government'}</div>
+              <div class="rep-name">${rep.name}</div>
+              <div class="rep-role">${rep.elected_office}${rep.party_name ? ' · ' + rep.party_name : ''}</div>
+            </div>
+          </div>
+          ${socialHtml}
           <div class="rep-actions">
-            ${email ? `<button class="btn-primary" onclick='openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>✉ Write Email</button>` : ''}
-            ${rep.url ? `<a class="btn-outline" href="${rep.url}" target="_blank">↗ Profile</a>` : ''}
-            <button class="btn-outline" onclick="copyInfo('${rep.name}', '${email}')">Copy Info</button>
+            ${email ? `<button class="btn-primary" onclick='openModal(${JSON.stringify(rep).replace(/'/g, "&#39;")})'>&#9993; Write Email</button>` : ''}
+            ${rep.url ? `<a class="btn-outline" href="${escAttr(rep.url)}" target="_blank">&#8599; Profile</a>` : ''}
+            <button class="btn-outline" onclick="copyInfo('${escAttr(rep.name)}', '${escAttr(email)}')">Copy Info</button>
           </div>
         </div>`;
     });
