@@ -10,7 +10,7 @@
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
     font-src https://fonts.gstatic.com;
     img-src 'self' data: https: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
-    connect-src 'self' https://api.geoapify.com https://represent.opennorth.ca https://corsproxy.io https://api.anthropic.com https://en.wikipedia.org;
+    connect-src 'self' https://civicconnect-proxy.jason-steltman.workers.dev https://represent.opennorth.ca https://api.anthropic.com https://en.wikipedia.org https://api.openparliament.ca;
     frame-ancestors 'none';
   "/>
   <!-- No data collection, no tracking, no cookies -->
@@ -2058,8 +2058,8 @@
     setTimeout(() => banner.style.display = 'none', 300);
   }
 
-  const GEOAPIFY_KEY = 'def29eda434347f6b7f2e0cdcbc47ce8';
-  const CORS_PROXY = 'https://corsproxy.io/?';
+  const WORKER_URL = 'https://civicconnect-proxy.jason-steltman.workers.dev';
+  const CORS_PROXY = WORKER_URL + '/proxy?url=';
 
   // ── Theme toggle ──────────────────────────────────────────
   let isDark = false;
@@ -2215,7 +2215,7 @@
 
   async function fetchSuggestions(text) {
     try {
-      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+      const url = `${WORKER_URL}/geoapify/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:ca&format=json`;
       const res = await fetch(url);
       const data = await res.json();
       const results = data.results || [];
@@ -2469,7 +2469,7 @@
       let geocodedCity = selectedCity;
 
       if (!lat || !lon) {
-        const geoUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:ca&format=json&apiKey=${GEOAPIFY_KEY}`;
+        const geoUrl = `${WORKER_URL}/geoapify/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:ca&format=json`;
         const geoRes = await fetch(geoUrl);
         const geoData = await geoRes.json();
         if (!geoData.results?.length) {
@@ -2675,7 +2675,7 @@
     try {
       const results = await Promise.all(
         SERVICE_CATEGORIES.map(cat =>
-          fetch(`https://api.geoapify.com/v2/places?categories=${cat.categories}&filter=circle:${lon},${lat},${cat.radius}&limit=5&apiKey=${GEOAPIFY_KEY}`)
+          fetch(`${WORKER_URL}/geoapify/v2/places?categories=${cat.categories}&filter=circle:${lon},${lat},${cat.radius}&limit=5`)
             .then(r => r.json())
             .then(data => {
               const places = (data.features || []).filter(f => f.properties && f.properties.name);
