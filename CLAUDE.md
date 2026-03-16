@@ -137,8 +137,8 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 
 **LAUNCH BLOCKERS (must do before sharing):**
 - [x] Cloudflare Worker proxy for Geoapify key + corsproxy.io replacement (civicconnect-proxy.jason-steltman.workers.dev)
-- [ ] Social sharing meta tags (`og:*`, `twitter:card`, `meta description`)
-- [ ] Favicon
+- [x] Social sharing meta tags (`og:*`, `twitter:card`, `meta description`)
+- [x] Favicon (🏛️ emoji SVG)
 
 **Post-launch (informed by user feedback):**
 - [x] MP voting tracker — OpenParliament.ca, shown in rep profile modal (March 2026)

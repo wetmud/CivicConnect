@@ -57,9 +57,10 @@ PHASE 2: DO BEFORE SHARING ON SOCIAL MEDIA
 PHASE 3: NICE TO HAVE (do after launch, informed by user feedback)
 ═══════════════════════════════════════════════════════════════
 
-6. Custom domain (civicreach.ca or similar)
-   - GitHub Pages supports custom domains for free
-   - Need to buy domain (~$15/yr) and configure DNS
+6. Custom domain — deciding between civilengagement.ca and civicconnect.ca
+   - Cloudflare Pages supports custom domains for free
+   - Need to buy domain (~$15/yr on Namecheap) and configure DNS in Cloudflare
+   - "whosmymp.ca" considered but too narrow (app covers all levels, not just MPs)
 
 7. Fix meeting scraper date parsing
    - Add debug logging to see raw eSCRIBE link text
@@ -86,8 +87,8 @@ PHASE 3: NICE TO HAVE (do after launch, informed by user feedback)
 LAUNCH SEQUENCE (recommended order)
 ═══════════════════════════════════════════════════════════════
 
-Day 1: Cloudflare Worker (covers #1 and #2)
-Day 1: Meta tags + favicon + description (#3, #4, #5)
+Day 1: Cloudflare Worker (covers #1 and #2) ✅ DONE
+Day 1: Meta tags + favicon + description (#3, #4, #5) ✅ DONE
 Day 1: Push, test on mobile, share with 3-5 friends for sanity check
 Day 2: Post to Reddit (r/ontario, r/burlington, r/canadianpolitics, r/civictech)
 Day 2: Share on X with OG image
