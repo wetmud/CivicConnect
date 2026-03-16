@@ -25,24 +25,13 @@ What's COMMENTED OUT (not blocking launch):
 PHASE 1: MUST DO BEFORE SHARING (blockers)
 ═══════════════════════════════════════════════════════════════
 
-1. REPLACE GEOAPIFY KEY EXPOSURE
-   Status: Hardcoded at line ~2061 (def29eda434347f6b7f2e0cdcbc47ce8)
-   Risk: Anyone can view-source, steal the key, burn your quota
-   Fix: Cloudflare Worker proxy (free tier, ~30 min setup)
-   - Create Worker that proxies requests to api.geoapify.com
-   - Worker holds the key server-side
-   - Frontend calls your Worker URL instead
-   - Add rate limiting in the Worker (optional but smart)
+1. REPLACE GEOAPIFY KEY EXPOSURE ✅ DONE
+   Worker: civicconnect-proxy.jason-steltman.workers.dev/geoapify/*
+   Key stored as Cloudflare secret (GEOAPIFY_KEY), never exposed client-side.
 
-2. REPLACE CORSPROXY.IO
-   Status: Hardcoded at line ~2062, used for OpenParliament API
-   Risk: Third-party proxy you don't control — could go down, intercept data
-   Fix: Same Cloudflare Worker can proxy OpenParliament requests too
-   - One Worker, two routes: /geoapify/* and /openparliament/*
-   - Or use Vercel Edge Function if you prefer
-   - Update CSP connect-src to your worker domain
-
-Both of these can be ONE Cloudflare Worker. Estimated effort: 1-2 hours.
+2. REPLACE CORSPROXY.IO ✅ DONE
+   Worker: civicconnect-proxy.jason-steltman.workers.dev/proxy?url=
+   Allowlist: represent.opennorth.ca + api.openparliament.ca only.
 
 ═══════════════════════════════════════════════════════════════
 PHASE 2: DO BEFORE SHARING ON SOCIAL MEDIA

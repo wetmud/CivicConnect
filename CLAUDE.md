@@ -2,7 +2,7 @@
 
 Free, open-source civic engagement tool for Canadians. Enter an address → get every elected official who represents you, nearby public services, ward boundaries on a map, city budget breakdowns with AI summaries, and one-click AI-drafted emails to representatives.
 
-**Live:** `wetmud.github.io/CivicConnect`
+**Live:** `civicconnect.jason-steltman.workers.dev`
 **Stack:** Single-file vanilla HTML/CSS/JS — no build step, no framework, no backend.
 
 ---
@@ -120,8 +120,8 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 
 | Issue | Severity | Fix |
 |-------|---------|-----|
-| Geoapify key hardcoded in JS | High | Move to Cloudflare Worker proxy |
-| corsproxy.io (untrusted third party) | High | Self-hosted CORS proxy |
+| Geoapify key hardcoded in JS | ~~High~~ | ✅ Fixed — Cloudflare Worker proxy (civicconnect-proxy.jason-steltman.workers.dev) |
+| corsproxy.io (untrusted third party) | ~~High~~ | ✅ Fixed — same Worker, /proxy?url= route |
 | No rate limiting | Medium | Add per-session debounce or Cloudflare rate limiting |
 | No ARIA roles on modal | Low | Add `role="dialog"`, `aria-modal`, focus trap |
 | OpenParliament slug matching | Low | `toOpenParliamentSlug()` handles accents but may miss unusual names; test edge cases |
@@ -136,7 +136,7 @@ If no key is set, the UI prompts the user before any Claude feature is used.
 > Full launch plan with rationale in `LAUNCH_PLAN.txt`.
 
 **LAUNCH BLOCKERS (must do before sharing):**
-- [ ] Cloudflare Worker proxy for Geoapify key + corsproxy.io replacement (one Worker, two routes)
+- [x] Cloudflare Worker proxy for Geoapify key + corsproxy.io replacement (civicconnect-proxy.jason-steltman.workers.dev)
 - [ ] Social sharing meta tags (`og:*`, `twitter:card`, `meta description`)
 - [ ] Favicon
 
