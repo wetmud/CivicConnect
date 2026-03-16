@@ -97,4 +97,16 @@ That's a product philosophy worth naming. It's not about engagement or growth ha
 
 ---
 
-*Next session: WorkerShield v1 scoping, or US version of CivicConnect?*
+---
+
+## To-Do Notes
+
+### CivicConnect
+- [ ] Rewrite the About page in your own voice — make it sound like a person wrote it, not a product description. Should feel genuine and explain why you built it.
+
+### Personal Site
+- [ ] **Root/tree visual idea** — explore a scrolling background where you're travelling down through the root system of a tree or plant. As you scroll the page, the roots grow/extend downward. Could be SVG animation or canvas. Distinctive, organic, fits the "growth" metaphor. Revisit this when working on the personal site.
+
+---
+
+*Next session: buy civicengagement.ca + wire up custom domain in Cloudflare, or WorkerShield v1 scoping?*
