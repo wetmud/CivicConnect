@@ -2282,7 +2282,7 @@
     dropdown.innerHTML = results.slice(0, 6).map(r => {
       const label = r.formatted || r.address_line1 || 'Unknown';
       const city = r.city || r.county || r.state_district || '';
-      return `<div class="autocomplete-item" data-lat="${r.lat}" data-lon="${r.lon}" data-city="${city.toLowerCase()}" data-label="${label.replace(/"/g, '&quot;')}">${label}</div>`;
+      return `<div class="autocomplete-item" data-lat="${r.lat}" data-lon="${r.lon}" data-city="${escAttr(city.toLowerCase())}" data-label="${escAttr(label)}">${escHtml(label)}</div>`;
     }).join('');
     dropdown.style.display = 'block';
     dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
@@ -2640,6 +2640,14 @@
       .replace(/>/g, '&gt;');
   }
 
+  // Escape values inserted as text content in HTML
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   function buildSocialLinks(rep) {
     const extra = rep.extra || {};
     const links = [];
@@ -2680,9 +2688,9 @@
           <div class="rep-card-header">
             ${photoHtml}
             <div class="rep-info">
-              <div class="rep-level">${rep.representative_set_name || 'Government'}</div>
-              <div class="rep-name">${rep.name}</div>
-              <div class="rep-role">${rep.elected_office}${rep.party_name ? ' · ' + rep.party_name : ''}</div>
+              <div class="rep-level">${escHtml(rep.representative_set_name || 'Government')}</div>
+              <div class="rep-name">${escHtml(rep.name)}</div>
+              <div class="rep-role">${escHtml(rep.elected_office)}${rep.party_name ? ' · ' + escHtml(rep.party_name) : ''}</div>
             </div>
           </div>
           ${socialHtml}
