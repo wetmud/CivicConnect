@@ -3736,7 +3736,12 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
       container.appendChild(note);
     }
 
-    leaders.forEach(leader => container.appendChild(buildLeaderCard(leader)));
+    leaders.forEach(leader => {
+      const card = buildLeaderCard(leader);
+      container.appendChild(card);
+      // Fetch Wikipedia thumbnail for card photo after render
+      fetchLeaderCardPhoto(leader.name, card);
+    });
 
     const verNote = document.createElement('div');
     verNote.className = 'leaders-note';
@@ -3764,6 +3769,29 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
     };
   }
 
+  async function fetchLeaderCardPhoto(name, card) {
+    try {
+      const url = 'https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=300&redirects=1&titles=' + encodeURIComponent(name) + '&format=json&origin=*';
+      const res = await fetch(url);
+      const data = await res.json();
+      const pages = data.query && data.query.pages;
+      if (!pages) return;
+      const page = Object.values(pages)[0];
+      const thumbUrl = page && page.thumbnail && page.thumbnail.source;
+      if (!thumbUrl) return;
+      // Insert photo into card header
+      const header = card.querySelector('.rep-card-header');
+      const info = card.querySelector('.rep-info');
+      if (!header || !info) return;
+      const photo = document.createElement('img');
+      photo.className = 'rep-photo';
+      photo.src = thumbUrl;
+      photo.alt = name;
+      photo.onerror = function() { this.style.display = 'none'; };
+      header.insertBefore(photo, info);
+    } catch { /* silent — photo just won't show */ }
+  }
+
   function buildLeaderCard(leader) {
     const rep = leaderToRep(leader);
 
@@ -3776,16 +3804,7 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
     const header = document.createElement('div');
     header.className = 'rep-card-header';
 
-    // Photo placeholder — fetchWikiBio will fill src when profile is opened
-    // We create a hidden img here; if photo_url is set it shows, otherwise hidden
-    if (rep.photo_url) {
-      const photo = document.createElement('img');
-      photo.className = 'rep-photo';
-      photo.src = rep.photo_url;
-      photo.alt = leader.name;
-      photo.onerror = function() { this.style.display = 'none'; };
-      header.appendChild(photo);
-    }
+    // Photo injected asynchronously by fetchLeaderCardPhoto() after card renders
 
     const info = document.createElement('div');
     info.className = 'rep-info';
