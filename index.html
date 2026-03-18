@@ -1114,63 +1114,6 @@
     .courtesy-tip-body { font-size: 0.75rem; color: var(--text-muted); line-height: 1.65; }
 
     /* ── Leaders tab ─────────────────────────────────────── */
-    .leaders-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-top: 0.5rem;
-    }
-    @media (max-width: 600px) {
-      .leaders-grid { grid-template-columns: 1fr; }
-    }
-    .leader-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      transition: border-color 0.15s;
-    }
-    .leader-card:hover { border-color: var(--accent); }
-    .leader-avatar {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: color-mix(in srgb, var(--accent) 15%, var(--surface));
-      border: 2px solid var(--border);
-      overflow: hidden; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; font-weight: 600; color: var(--accent);
-    }
-    .leader-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .leader-header { display: flex; gap: 0.9rem; align-items: center; }
-    .leader-meta { flex: 1; min-width: 0; }
-    .leader-title {
-      font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em;
-      color: var(--accent); margin-bottom: 0.2rem;
-    }
-    .leader-name {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.1rem; line-height: 1.2; color: var(--text);
-    }
-    .leader-party {
-      font-size: 0.65rem; color: var(--text-muted); margin-top: 0.2rem;
-    }
-    .leader-contacts {
-      display: flex; flex-direction: column; gap: 0.3rem;
-      font-size: 0.68rem; color: var(--text-muted);
-    }
-    .leader-contacts a {
-      color: var(--text-muted); text-decoration: none;
-      transition: color 0.15s;
-    }
-    .leader-contacts a:hover { color: var(--accent); }
-    .leader-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
-    .leader-verified {
-      font-size: 0.6rem; color: var(--text-muted);
-      margin-top: auto; padding-top: 0.5rem;
-      border-top: 1px solid var(--border);
-    }
     .leaders-note {
       margin-top: 1rem; padding: 0.75rem 1rem;
       background: color-mix(in srgb, var(--accent) 6%, var(--bg));
@@ -1857,8 +1800,7 @@
       <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
       <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
       <button class="tab-btn" onclick="switchTab('leaders', this)">Leaders</button>
-      <!-- MEETINGS TAB: re-enable once scraper date parsing is fixed and summaries exist -->
-      <!-- <button class="tab-btn" data-short="Meetings" onclick="switchTab('meetings', this)"><span class="tab-long">Council Meetings</span></button> -->
+      <button class="tab-btn" data-short="Meetings" onclick="switchTab('meetings', this)"><span class="tab-long">Council Meetings</span></button>
       <!-- BUDGET TAB: re-enable by removing comment -->
       <!-- <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button> -->
     </div>
@@ -3020,13 +2962,24 @@
 
       const pageTitle = hits[0].title;
       const extractRes = await Promise.race([
-        fetch('https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&redirects=1&titles=' + encodeURIComponent(pageTitle) + '&format=json&origin=*'),
+        fetch('https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=true&redirects=1&piprop=thumbnail&pithumbsize=300&titles=' + encodeURIComponent(pageTitle) + '&format=json&origin=*'),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
       ]);
       const extractData = await extractRes.json();
       const pages = extractData.query && extractData.query.pages;
       const page = pages && Object.values(pages)[0];
       const extract = page && page.extract;
+
+      // Set photo from Wikipedia thumbnail if the modal has no photo yet
+      const thumbUrl = page && page.thumbnail && page.thumbnail.source;
+      if (thumbUrl) {
+        const photoEl = document.getElementById('rpModal-photo');
+        if (photoEl && (!photoEl.src || photoEl.src === window.location.href)) {
+          photoEl.src = thumbUrl;
+          photoEl.alt = rep.name;
+          photoEl.parentElement.style.display = '';
+        }
+      }
 
       if (!extract || extract.includes('may refer to')) { wikiCache[rep.name] = null; wikiEl.style.display = 'none'; return; }
 
@@ -3740,50 +3693,122 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
     const federal = _leadersData.federal;
     const prov = provinceCode ? _leadersData.provinces[provinceCode.toUpperCase()] : null;
 
-    let html = '<div class="leaders-grid">';
-    if (prov) html += renderLeaderCard(prov);
-    html += renderLeaderCard(federal);
-    html += '</div>';
+    const leaders = prov ? [prov, federal] : [federal];
+    const container = document.createElement('div');
 
     if (!prov) {
-      html += `<div class="leaders-note">Search a Canadian address to show your provincial Premier alongside the Prime Minister.</div>`;
+      const note = document.createElement('div');
+      note.className = 'leaders-note';
+      note.textContent = 'Search a Canadian address to also show your provincial Premier.';
+      container.appendChild(note);
     }
-    html += `<div class="leaders-note">Leader data is verified periodically. If something looks outdated, <a href="https://github.com/wetmud/CivicEngagement/issues/new" target="_blank" style="color:var(--accent)">let us know ↗</a>.</div>`;
 
-    el.innerHTML = html;
+    leaders.forEach(leader => container.appendChild(buildLeaderCard(leader)));
+
+    const verNote = document.createElement('div');
+    verNote.className = 'leaders-note';
+    verNote.innerHTML = 'Leader data is verified periodically. If something looks outdated, <a href="https://github.com/wetmud/CivicEngagement/issues/new" target="_blank" style="color:var(--accent)">let us know ↗</a>.';
+    container.appendChild(verNote);
+
+    el.innerHTML = '';
+    el.appendChild(container);
   }
 
-  function renderLeaderCard(leader) {
-    const initials = leader.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const avatarInner = leader.photo_url
-      ? `<img src="${escAttr(leader.photo_url)}" alt="${escAttr(leader.name)}" onerror="this.style.display='none'">`
-      : escHtml(initials);
+  function leaderToRep(leader) {
+    // Shape a leader object to match what openRepProfile() expects
+    return {
+      name: leader.name,
+      elected_office: leader.title,
+      representative_set_name: leader.title.includes('Canada') ? 'Canada' : leader.title,
+      party_name: leader.party || null,
+      email: leader.email || null,
+      photo_url: null, // Wikipedia will fill this in via fetchWikiBio
+      url: leader.website || null,
+      extra: {
+        phone: leader.phone || null,
+        verified_at: leader.verified_at || null
+      }
+    };
+  }
+
+  function buildLeaderCard(leader) {
+    const rep = leaderToRep(leader);
     const sinceYear = leader.since ? leader.since.slice(0, 4) : '';
     const verifiedDate = leader.verified_at
-      ? new Date(leader.verified_at + 'T12:00:00').toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+      ? new Date(leader.verified_at + 'T12:00:00').toLocaleDateString('en-CA', { year: 'numeric', month: 'short', year: 'numeric' })
       : '';
-    const repObj = JSON.stringify({ name: leader.name, elected_office: leader.title, email: leader.email || '', representative_set_name: 'Canada' }).replace(/'/g, '&#39;');
 
-    return `<div class="leader-card">
-      <div class="leader-header">
-        <div class="leader-avatar">${avatarInner}</div>
-        <div class="leader-meta">
-          <div class="leader-title">${escHtml(leader.title)}</div>
-          <div class="leader-name">${escHtml(leader.name)}</div>
-          <div class="leader-party">${escHtml(leader.party)}${sinceYear ? ' · since ' + sinceYear : ''}</div>
-        </div>
-      </div>
-      <div class="leader-contacts">
-        ${leader.email ? `<span>✉ <a href="mailto:${escAttr(leader.email)}">${escHtml(leader.email)}</a></span>` : ''}
-        ${leader.phone ? `<span>📞 <a href="tel:${escAttr(leader.phone)}">${escHtml(leader.phone)}</a></span>` : ''}
-        ${leader.website ? `<span>🔗 <a href="${escAttr(leader.website)}" target="_blank" rel="noopener">${escHtml(leader.website.replace(/^https?:\/\//, ''))}</a></span>` : ''}
-      </div>
-      <div class="leader-actions">
-        ${leader.email ? `<button class="btn-primary" style="font-size:0.7rem;padding:0.45rem 0.9rem;" onclick='openModal(${repObj})'>✉ Write Email</button>` : ''}
-        ${leader.website ? `<a class="btn-outline" style="font-size:0.7rem;padding:0.45rem 0.9rem;" href="${escAttr(leader.website)}" target="_blank" rel="noopener">Website ↗</a>` : ''}
-      </div>
-      ${verifiedDate ? `<div class="leader-verified">✓ Verified ${verifiedDate}</div>` : ''}
-    </div>`;
+    // Build card using DOM methods (XSS-safe, matches rep card pattern)
+    const card = document.createElement('div');
+    card.className = 'rep-card';
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => openRepProfile(rep));
+
+    // Header row
+    const header = document.createElement('div');
+    header.className = 'rep-card-header';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'rep-name';
+    nameEl.textContent = leader.name;
+
+    const roleEl = document.createElement('div');
+    roleEl.className = 'rep-role';
+    roleEl.textContent = leader.title + (sinceYear ? ' · since ' + sinceYear : '');
+
+    const partyEl = document.createElement('div');
+    partyEl.className = 'rep-party';
+    partyEl.textContent = leader.party || '';
+
+    header.appendChild(nameEl);
+    header.appendChild(roleEl);
+    header.appendChild(partyEl);
+    card.appendChild(header);
+
+    // Contact row
+    const meta = document.createElement('div');
+    meta.className = 'rep-meta';
+
+    if (leader.email) {
+      const emailSpan = document.createElement('span');
+      emailSpan.className = 'rep-email';
+      emailSpan.textContent = leader.email;
+      meta.appendChild(emailSpan);
+    }
+    if (leader.phone) {
+      const phoneSpan = document.createElement('span');
+      phoneSpan.className = 'rep-email';
+      phoneSpan.textContent = '📞 ' + leader.phone;
+      meta.appendChild(phoneSpan);
+    }
+    if (verifiedDate) {
+      const verSpan = document.createElement('span');
+      verSpan.style.cssText = 'font-size:0.6rem;color:var(--text-muted);';
+      verSpan.textContent = '✓ Verified ' + verifiedDate;
+      meta.appendChild(verSpan);
+    }
+    card.appendChild(meta);
+
+    // Action buttons
+    const actions = document.createElement('div');
+    actions.className = 'rep-actions';
+
+    const profileBtn = document.createElement('button');
+    profileBtn.className = 'btn-outline';
+    profileBtn.textContent = 'View Profile';
+    profileBtn.addEventListener('click', e => { e.stopPropagation(); openRepProfile(rep); });
+    actions.appendChild(profileBtn);
+
+    if (leader.email) {
+      const emailBtn = document.createElement('button');
+      emailBtn.className = 'btn-primary';
+      emailBtn.textContent = '✉ Write Email';
+      emailBtn.addEventListener('click', e => { e.stopPropagation(); openModal(rep); });
+      actions.appendChild(emailBtn);
+    }
+
+    card.appendChild(actions);
+    return card;
   }
 
   let currentCityKey = null;
