@@ -2024,7 +2024,9 @@
       <button class="tab-btn active" onclick="switchTab('reps', this)">Local &amp; Provincial</button>
       <button class="tab-btn" onclick="switchTab('services', this)">Nearby Services</button>
       <button class="tab-btn" onclick="switchTab('leaders', this)">Leaders</button>
+      <!-- MEETINGS TAB: commented out until scraper is fixed
       <button class="tab-btn" data-short="Meetings" onclick="switchTab('meetings', this)"><span class="tab-long">Council Meetings</span></button>
+      -->
       <!-- BUDGET TAB: commented out until built
       <button class="tab-btn" onclick="switchTab('budget', this)">City Budget</button>
       -->
@@ -2497,6 +2499,9 @@
   // Reps whose Represent API photo is known-bad — skip it and use Wikipedia instead
   const WIKI_PHOTO_PREFERRED = new Set([
     'Andrea Horwath',
+  ]);
+  // Reps with no usable photo anywhere — hide the circle entirely
+  const NO_PHOTO = new Set([
     'Nrinder Nann',
   ]);
   const wikidataCache = {};
@@ -3152,10 +3157,13 @@
     reps.forEach((rep, i) => {
       const email = rep.email || '';
       const useWiki = WIKI_PHOTO_PREFERRED.has(rep.name);
-      const photoUrl = !useWiki && rep.photo_url && /^https?:\/\//.test(rep.photo_url) ? rep.photo_url : null;
-      const photoHtml = photoUrl
-        ? `<img class="rep-photo" src="${escAttr(photoUrl)}" alt="${escAttr(rep.name)}" data-rep-name="${escAttr(rep.name)}" data-rep-office="${escAttr(rep.elected_office || '')}" onerror="tryFallbackPhoto(this)">`
-        : `<img class="rep-photo" alt="${escAttr(rep.name)}" data-rep-name="${escAttr(rep.name)}" data-rep-office="${escAttr(rep.elected_office || '')}" data-load-wiki style="display:none">`;
+      const noPhoto = NO_PHOTO.has(rep.name);
+      const photoUrl = !useWiki && !noPhoto && rep.photo_url && /^https?:\/\//.test(rep.photo_url) ? rep.photo_url : null;
+      const photoHtml = noPhoto
+        ? ''
+        : photoUrl
+          ? `<img class="rep-photo" src="${escAttr(photoUrl)}" alt="${escAttr(rep.name)}" data-rep-name="${escAttr(rep.name)}" data-rep-office="${escAttr(rep.elected_office || '')}" onerror="tryFallbackPhoto(this)">`
+          : `<img class="rep-photo" alt="${escAttr(rep.name)}" data-rep-name="${escAttr(rep.name)}" data-rep-office="${escAttr(rep.elected_office || '')}" data-load-wiki style="display:none">`;
       const socialHtml = buildSocialLinks(rep);
       html += `
         <div class="rep-card" data-rep-idx="${i}" style="animation-delay:${i * 0.06}s;cursor:pointer" role="button" tabindex="0" aria-label="View profile: ${escAttr(rep.name)}">
