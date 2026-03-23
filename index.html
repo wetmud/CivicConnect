@@ -569,11 +569,13 @@
       .header-right {
         justify-content: flex-end;
         flex-wrap: nowrap;
-        gap: 0.4rem;
+        flex-shrink: 1;
+        gap: 0.3rem;
+        overflow: hidden;
       }
-      .logo { font-size: 1.2rem; }
-      .theme-toggle { width: 34px; height: 34px; }
-      .btn-about, .btn-donate { padding: 0.45rem 0.75rem; font-size: 0.68rem; }
+      .logo { font-size: 1.1rem; flex-shrink: 0; }
+      .theme-toggle { width: 32px; height: 32px; flex-shrink: 0; }
+      .btn-about, .btn-donate { padding: 0.35rem 0.5rem; font-size: 0.63rem; }
     }
 
     main {
@@ -619,6 +621,7 @@
     @media (max-width: 480px) {
       .hero { margin-bottom: 1.5rem; }
       .hero p { font-size: 0.78rem; }
+      .about-body p { font-size: 0.82rem; line-height: 1.6; }
     }
 
     .search-box {
@@ -630,7 +633,8 @@
 
     @media (max-width: 480px) {
       .search-box { padding: 0; overflow: hidden; }
-      #search-btn { padding: 0 1rem; font-size: 0.68rem; min-width: 90px; }
+      #search-btn { padding: 0 0.75rem; font-size: 0.65rem; min-width: 80px; letter-spacing: 0.05em; }
+      .autocomplete-dropdown { max-width: calc(100vw - 2rem); }
     }
 
     .autocomplete-wrapper { position: relative; }
@@ -2302,7 +2306,7 @@
 </div>
 
 <footer>
-  Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒 No data collected, ever
+  Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒&nbsp;No data collected, ever
   <div style="margin-top:12px;">
     <a class="footer-recommend-btn" href="https://github.com/wetmud/CivicEngagement/issues/new?title=Feature+Request&body=**Feature+idea:**%0A%0A**Why+it+would+help:**" target="_blank">💡 Recommend a Feature</a>
   </div>
