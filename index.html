@@ -167,6 +167,7 @@
       justify-content: space-between;
       gap: 0.75rem;
       flex-wrap: wrap;
+      position: relative;
     }
 
     .logo {
@@ -219,6 +220,63 @@
       background: var(--accent);
       color: var(--on-accent);
       border-color: var(--accent);
+    }
+
+    /* Mobile header menu */
+    .btn-menu {
+      display: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 1.1rem;
+      padding: 0 0.65rem;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      min-height: 44px;
+      align-items: center;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-menu:hover { border-color: var(--accent); color: var(--accent); }
+
+    .header-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.5rem;
+      z-index: 100;
+      min-width: 160px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .header-menu-dropdown.open { display: flex; }
+    .header-menu-dropdown button {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      text-align: left;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .header-menu-dropdown button:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    @media (max-width: 600px) {
+      .btn-about, .btn-donate, .tagline { display: none; }
+      .btn-menu { display: inline-flex; }
     }
 
     /* ── About modal ─────────────────────────────────── */
@@ -2042,9 +2100,15 @@
     <button class="btn-about" onclick="openAbout()">About</button>
     <button class="btn-about" onclick="openTips()">💡 Tips</button>
     <button class="btn-donate" onclick="openSupport()">☕ Support</button>
+    <button class="btn-menu" onclick="toggleHeaderMenu()" aria-label="Menu" aria-expanded="false" id="header-menu-btn">···</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
       <span class="theme-icon">🌙</span>
     </button>
+  </div>
+  <div class="header-menu-dropdown" id="header-menu-dropdown">
+    <button onclick="openAbout();toggleHeaderMenu()">About</button>
+    <button onclick="openTips();toggleHeaderMenu()">💡 Tips</button>
+    <button onclick="openSupport();toggleHeaderMenu()">☕ Support</button>
   </div>
 </header>
 
@@ -2374,12 +2438,21 @@
 
 <footer>
   Powered by <a href="https://represent.opennorth.ca" target="_blank">Represent API</a> &amp; <a href="https://www.geoapify.com" target="_blank">Geoapify</a> &nbsp;·&nbsp; Built for civic engagement &nbsp;·&nbsp; 🔒&nbsp;No data collected, ever
-  <div style="margin-top:12px;">
-    <a class="footer-recommend-btn" href="https://github.com/wetmud/CivicEngagement/issues/new?title=Feature+Request&body=**Feature+idea:**%0A%0A**Why+it+would+help:**" target="_blank">💡 Recommend a Feature</a>
-  </div>
 </footer>
 
 <script>
+  // ── Mobile header menu ────────────────────────────────────
+  function toggleHeaderMenu() {
+    const dropdown = document.getElementById('header-menu-dropdown');
+    const btn = document.getElementById('header-menu-btn');
+    const isOpen = dropdown.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen);
+    if (isOpen) {
+      const close = (e) => { if (!dropdown.contains(e.target) && e.target !== btn) { dropdown.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', close); } };
+      setTimeout(() => document.addEventListener('click', close), 0);
+    }
+  }
+
   // ── Tips modal ────────────────────────────────────────────
   function openTips() { document.getElementById('tips-backdrop').classList.add('open'); }
   function closeTips(e) {
