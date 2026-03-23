@@ -1,4 +1,4 @@
-# CivicConnect — Brand Identity System
+# Civic Engagement — Brand Identity System
 *Created 2026-03-22 using Brand Guardian, AI Citation Strategist, Social Media Strategist, and Nexus Orchestrator agents (msitarzewski/agency-agents)*
 
 ---
@@ -32,7 +32,7 @@ Give people the information and tools to speak to power — for free, forever.
 You'll always be able to find your reps and write to them — no account, no fee, no bullshit.
 
 ### Positioning Statement
-*For Canadians who want to be heard, CivicConnect is the free civic tool that cuts through government complexity so you know exactly who represents you and how to reach them — unlike government websites, which were designed for the government.*
+*For Canadians who want to be heard, Civic Engagement is the free civic tool that cuts through government complexity so you know exactly who represents you and how to reach them — unlike government websites, which were designed for the government.*
 
 ---
 
@@ -111,11 +111,11 @@ You'll always be able to find your reps and write to them — no account, no fee
 ## AI Discoverability (AEO/GEO)
 
 ### Implemented (2026-03-22)
-- Updated `<title>`: "CivicConnect — Find Your Canadian Representatives"
+- Updated `<title>`: "Civic Engagement — Find Your Canadian Representatives"
 - Updated `<meta name="description">`: direct, benefit-led, brand-voiced
 - Added `<meta name="keywords">` with search intent phrases
 - Updated OG tags: brand-consistent, plain-spoken
-- Added `apple-mobile-web-app-title`: "CivicConnect"
+- Added `apple-mobile-web-app-title`: "Civic Engagement"
 - Added JSON-LD `WebApplication` schema with `isAccessibleForFree: true`
 
 ### Key Phrases to Own
@@ -162,7 +162,7 @@ You'll always be able to find your reps and write to them — no account, no fee
 ## Brand Map
 
 ```
-CivicConnect
+Civic Engagement
 │
 ├── CORE IDENTITY
 │   ├── Purpose: "Make civic tools free and human"
