@@ -10,7 +10,7 @@
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
     font-src https://fonts.gstatic.com;
     img-src 'self' data: https: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org;
-    connect-src 'self' https://civicconnect-proxy.jason-steltman.workers.dev https://represent.opennorth.ca https://api.anthropic.com https://en.wikipedia.org https://api.openparliament.ca https://www.wikidata.org https://text.pollinations.ai https://gen.pollinations.ai;
+    connect-src 'self' https://civicconnect-proxy.jason-steltman.workers.dev https://represent.opennorth.ca https://api.anthropic.com https://en.wikipedia.org https://api.openparliament.ca https://www.wikidata.org https://gen.pollinations.ai;
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'none';
@@ -4946,7 +4946,7 @@ let civilOpened    = false;
 let civilDepts     = null;
 let civilLastDraft = '';  // stores last Civil reply — used by civilPrefillEmail()
 
-const CIVIL_POLLINATIONS_BASE = 'https://text.pollinations.ai';
+const CIVIL_API_URL = 'https://gen.pollinations.ai/v1/chat/completions';
 
 function civilContext() {
   const city  = selectedCity     || 'unknown city';
@@ -5114,19 +5114,11 @@ async function civilSend() {
   civilShowTyping();
 
   try {
-    // Use GET endpoint — no preflight, no CORS issues
-    // Serialize history as a conversation transcript in the prompt
-    const transcript = civilHistory
-      .filter(m => m.role !== 'system')
-      .map(m => (m.role === 'user' ? 'User: ' : 'Civil: ') + m.content)
-      .join('\n');
-    const fullPrompt = transcript + '\nCivil:';
-    const url = CIVIL_POLLINATIONS_BASE + '/' +
-      encodeURIComponent(fullPrompt) +
-      '?model=openai&system=' + encodeURIComponent(civilSystemPrompt()) +
-      '&seed=-1';
-
-    const res = await fetch(url);
+    const res = await fetch(CIVIL_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'openai', messages: civilHistory })
+    });
 
     civilHideTyping();
 
@@ -5135,7 +5127,10 @@ async function civilSend() {
       throw new Error('non-200');
     }
 
-    const reply = (await res.text()).trim();
+    const data = await res.json();
+    const reply = (data.choices && data.choices[0] && data.choices[0].message)
+      ? data.choices[0].message.content
+      : "Sorry, I couldn't get a response right now.";
 
     civilLastDraft = reply;  // store for civilPrefillEmail()
     civilHistory.push({ role: 'assistant', content: reply });
