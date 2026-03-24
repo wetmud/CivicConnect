@@ -5122,9 +5122,13 @@ async function civilSend() {
 
     civilHideTyping();
 
-    if (!res.ok) throw new Error('non-200');
+    if (!res.ok) {
+      console.error('[Civil] API status:', res.status, await res.text().catch(() => ''));
+      throw new Error('non-200');
+    }
 
     const data  = await res.json();
+    console.log('[Civil] response:', data);
     const reply = (data.choices && data.choices[0] && data.choices[0].message)
       ? data.choices[0].message.content
       : "Sorry, I couldn't get a response right now.";
@@ -5133,7 +5137,8 @@ async function civilSend() {
     civilHistory.push({ role: 'assistant', content: reply });
     civilRender(reply, 'civil');
 
-  } catch (_) {
+  } catch (err) {
+    console.error('[Civil] fetch error:', err);
     civilHideTyping();
     let fallback = "I'm having trouble connecting right now.";
     if (loadedReps.length > 0) {
