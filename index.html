@@ -2726,7 +2726,8 @@
     }).join('');
     dropdown.style.display = 'block';
     dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault(); // prevent input blur before selection
         input.value = el.dataset.label;
         selectedLat = parseFloat(el.dataset.lat);
         selectedLon = parseFloat(el.dataset.lon);
