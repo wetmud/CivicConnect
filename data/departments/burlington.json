@@ -1,0 +1,13 @@
+{
+  "city": "Burlington",
+  "slug": "burlington",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "Service Burlington",
+    "phone": "905-335-7777",
+    "email": "city@burlington.ca",
+    "web": "https://www.burlington.ca/en/council-and-city-administration/service-burlington.aspx",
+    "hours": "Mon–Fri 8:30am–4:30pm"
+  }
+}

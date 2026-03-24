@@ -1,0 +1,14 @@
+{
+  "city": "London",
+  "slug": "london",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "Service London",
+    "phone": "519-661-2489",
+    "email": "service@london.ca",
+    "web": "https://london.ca/contact-us",
+    "hours": "Mon–Fri 8:30am–4:30pm",
+    "after_hours": "519-661-4965"
+  }
+}

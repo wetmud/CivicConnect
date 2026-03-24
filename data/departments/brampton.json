@@ -1,0 +1,14 @@
+{
+  "city": "Brampton",
+  "slug": "brampton",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "311 Brampton",
+    "phone": "311",
+    "phone_outside_city": "905-874-2000",
+    "email": "311@brampton.ca",
+    "web": "https://www.brampton.ca/en/online-services/Pages/311-Brampton.aspx",
+    "hours": "Daily 7am–12am"
+  }
+}

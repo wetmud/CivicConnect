@@ -1,0 +1,95 @@
+{
+  "city": "Burlington",
+  "slug": "burlington",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "service_centre": {
+    "name": "Service Burlington",
+    "note": "General city services intake — routes to all departments",
+    "phone": "905-335-7777",
+    "email": "city@burlington.ca",
+    "web": "https://www.burlington.ca/en/council-and-city-administration/service-burlington.aspx",
+    "hours": "Mon–Fri 8:30am–4:30pm"
+  },
+  "departments": [
+    {
+      "name": "Roads & Transportation",
+      "handles": ["pothole", "road", "sidewalk", "snow removal", "street light", "curb", "pavement", "road damage", "street sign", "traffic light"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/roads-and-transportation/roads-and-transportation.aspx",
+      "notes": "Report via Service Burlington. Regional roads (Appleby Line, New St, etc.) fall under Halton Region: 311 or 905-825-6000."
+    },
+    {
+      "name": "By-law Enforcement",
+      "handles": ["noise", "parking", "property standards", "bylaw", "fence", "zoning", "property maintenance", "long grass", "unsightly", "nuisance", "idling", "illegal dumping"],
+      "phone": "905-335-7731",
+      "email": "bylaw@burlington.ca",
+      "web": "https://www.burlington.ca/en/by-laws-and-animal-services/by-law-enforcement.aspx",
+      "notes": "For parking enforcement specifically: city@burlington.ca or 905-335-7777."
+    },
+    {
+      "name": "Animal Services",
+      "handles": ["stray dog", "stray cat", "injured animal", "animal control", "dog bite", "loose animal", "wildlife", "dead animal"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/by-laws-and-animal-services/animal-services.aspx",
+      "notes": "Animal services handled through Service Burlington. After-hours emergencies: same number."
+    },
+    {
+      "name": "Parks, Forestry & Recreation",
+      "handles": ["park", "playground", "tree", "trail", "recreation", "arena", "pool", "community centre", "damaged equipment", "graffiti in park", "sports field", "fallen tree"],
+      "phone": "905-335-7738",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/recreation-culture-and-community/parks-and-open-spaces.aspx",
+      "hours": "Mon–Fri 8:30am–5:30pm, Sat–Sun 9am–4pm"
+    },
+    {
+      "name": "Burlington Transit",
+      "handles": ["bus", "transit", "route", "schedule", "stop", "accessibility transit", "handi-van", "late bus", "missed bus", "transit complaint"],
+      "phone": "905-639-0550",
+      "email": null,
+      "web": "https://www.burlington.ca/en/transit/transit.aspx",
+      "hours": "Mon–Fri 8am–6pm, Sat 10am–2pm"
+    },
+    {
+      "name": "Waste Management",
+      "handles": ["garbage", "waste", "recycling", "bin", "pickup", "compost", "missed collection", "bulk item", "yard waste", "organics", "blue box", "green bin"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/environment/garbage-and-recycling.aspx",
+      "notes": "Waste collection contracted through Halton Region for some streams — Service Burlington will route correctly."
+    },
+    {
+      "name": "Building & Permits",
+      "handles": ["building permit", "construction", "renovation", "inspection", "pool permit", "deck permit", "zoning certificate", "demolition"],
+      "phone": "905-335-7731",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/building-and-renovating/building-and-renovating.aspx"
+    },
+    {
+      "name": "Community Planning",
+      "handles": ["development application", "zoning amendment", "official plan", "severance", "variance", "heritage", "land use", "subdivision"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/community-planning/community-planning.aspx"
+    },
+    {
+      "name": "Water & Stormwater",
+      "handles": ["water", "watermain", "flooding", "sewer", "stormwater", "drain", "water pressure", "water quality", "leak", "burst pipe"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/environment/water-and-stormwater.aspx",
+      "notes": "After-hours emergencies (water main breaks, sewage backup): same number — 24/7 emergency line."
+    },
+    {
+      "name": "Service Burlington (General)",
+      "handles": ["general", "unsure", "other", "help", "complaint", "feedback", "not sure who to contact"],
+      "phone": "905-335-7777",
+      "email": "city@burlington.ca",
+      "web": "https://www.burlington.ca/en/council-and-city-administration/service-burlington.aspx",
+      "hours": "Mon–Fri 8:30am–4:30pm",
+      "notes": "Catch-all for any city issue. Staff will route to the correct department."
+    }
+  ]
+}

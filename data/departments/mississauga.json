@@ -1,0 +1,14 @@
+{
+  "city": "Mississauga",
+  "slug": "mississauga",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "311 Mississauga",
+    "phone": "311",
+    "phone_outside_city": "905-615-4311",
+    "email": "public.info@mississauga.ca",
+    "web": "https://www.mississauga.ca/contact-us/",
+    "hours": "Mon–Fri 7am–7pm"
+  }
+}

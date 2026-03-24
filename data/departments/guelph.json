@@ -1,0 +1,14 @@
+{
+  "city": "Guelph",
+  "slug": "guelph",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "ServiceGuelph",
+    "phone": "519-822-1260",
+    "email": "cityhall@guelph.ca",
+    "web": "https://guelph.ca/city-hall/city-hall/services/serviceguelph/",
+    "hours": "Mon–Fri 8:30am–4:30pm",
+    "after_hours": "519-822-1260 ext. 9"
+  }
+}

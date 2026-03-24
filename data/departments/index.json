@@ -1,0 +1,13 @@
+{
+  "cities": [
+    { "name": "Burlington", "slug": "burlington", "province": "ON" },
+    { "name": "Toronto", "slug": "toronto", "province": "ON" },
+    { "name": "Ottawa", "slug": "ottawa", "province": "ON" },
+    { "name": "Mississauga", "slug": "mississauga", "province": "ON" },
+    { "name": "Brampton", "slug": "brampton", "province": "ON" },
+    { "name": "Hamilton", "slug": "hamilton", "province": "ON" },
+    { "name": "London", "slug": "london", "province": "ON" },
+    { "name": "Kitchener", "slug": "kitchener", "province": "ON" },
+    { "name": "Guelph", "slug": "guelph", "province": "ON" }
+  ]
+}

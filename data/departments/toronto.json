@@ -1,0 +1,14 @@
+{
+  "city": "Toronto",
+  "slug": "toronto",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "311 Toronto",
+    "phone": "311",
+    "phone_outside_city": "416-392-2489",
+    "email": "311@toronto.ca",
+    "web": "https://www.toronto.ca/home/311-toronto-at-your-service/",
+    "hours": "24/7"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "city": "Hamilton",
+  "slug": "hamilton",
+  "province": "ON",
+  "updated": "2026-03-24",
+  "intake": {
+    "name": "City of Hamilton",
+    "phone": "905-546-2489",
+    "email": null,
+    "email_note": "Hamilton uses phone and online form — no verified public email found",
+    "web_contact_form": "https://www.hamilton.ca/city-council/contact-us",
+    "web": "https://www.hamilton.ca/city-council/contact-us",
+    "hours": "Mon–Fri 8:30am–4:30pm"
+  }
+}
