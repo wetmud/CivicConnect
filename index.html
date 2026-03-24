@@ -2857,6 +2857,7 @@
   let selectedLon = null;
   let selectedCity = '';
   let selectedProvince = '';
+  let selectedAddress = '';
   let autocompleteTimeout = null;
   let activeIndex = -1;
 
@@ -3319,6 +3320,7 @@
     if (!address) return;
     address = address.slice(0, 200).replace(/[\x00-\x1F\x7F]/g, '');
     if (!address) return;
+    selectedAddress = address;
     history.replaceState(null, '', '?q=' + encodeURIComponent(address));
 
     const btn = document.getElementById('search-btn');
@@ -3403,6 +3405,7 @@
       selectedLon = null;
       selectedCity = '';
       selectedProvince = '';
+      selectedAddress = '';
     }
   }
 
@@ -4965,7 +4968,8 @@ function civilContext() {
       + (i.web ? ', web: ' + i.web : '')
       + (i.hours ? ', hours: ' + i.hours : '');
   }
-  return `[Session: City=${city}, Province=${prov}, Ward=${ward}, Reps=[${repStr}], City intake contact: ${deptStr}]`;
+  const addr = selectedAddress || 'unknown';
+  return `[Session: Address=${addr}, City=${city}, Province=${prov}, Ward=${ward}, Reps=[${repStr}], City intake contact: ${deptStr}]`;
 }
 
 function civilSystemPrompt() {
