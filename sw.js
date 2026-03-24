@@ -1,4 +1,4 @@
-const CACHE_NAME = 'civicengage-v2';
+const CACHE_NAME = 'civicengage-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -30,7 +30,8 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('represent') ||
     url.hostname.includes('openparliament') ||
     url.hostname.includes('wikipedia') ||
-    url.hostname.includes('workers.dev')
+    url.hostname.includes('workers.dev') ||
+    url.hostname.includes('pollinations')
   ) {
     return;
   }
