@@ -4468,6 +4468,23 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
       actions.appendChild(emailBtn);
     }
 
+    if (leader.website) {
+      const pageBtn = document.createElement('a');
+      pageBtn.className = 'btn-outline';
+      pageBtn.textContent = '↗ Official Page';
+      pageBtn.href = leader.website;
+      pageBtn.target = '_blank';
+      pageBtn.rel = 'noopener noreferrer';
+      pageBtn.addEventListener('click', e => e.stopPropagation());
+      actions.appendChild(pageBtn);
+    }
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-outline';
+    copyBtn.textContent = 'Copy Info';
+    copyBtn.addEventListener('click', e => { e.stopPropagation(); copyInfo(leader.name, leader.email || ''); });
+    actions.appendChild(copyBtn);
+
     card.appendChild(actions);
     return card;
   }
