@@ -751,7 +751,7 @@
     .btn-short { display: none; }
 
     @media (max-width: 480px) {
-      .search-box { padding: 0; overflow: hidden; }
+      .search-box { padding: 0; }
       #search-btn { padding: 0 0.9rem; font-size: 0.7rem; letter-spacing: 0.04em; white-space: nowrap; }
       .btn-long { display: none; }
       .btn-short { display: inline; }
@@ -3331,7 +3331,6 @@
           ${socialHtml}
           <div class="rep-actions">
             ${email ? `<button class="btn-primary rep-email-btn" data-rep-idx="${i}">&#9993; Write Email</button>` : ''}
-            <button class="btn-outline rep-profile-btn" data-rep-idx="${i}" onclick="event.stopPropagation()">&#128100; View Profile</button>
             ${rep.url ? `<a class="btn-outline" href="${escAttr(rep.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">&#8599; Official Page</a>` : ''}
             <button class="btn-outline rep-copy-btn" onclick="event.stopPropagation();copyInfo('${escAttr(rep.name)}', '${escAttr(email)}')">Copy Info</button>
           </div>
@@ -4468,12 +4467,6 @@ Do not include placeholders like [Your Name] — end with just "A Concerned Resi
       emailBtn.addEventListener('click', e => { e.stopPropagation(); openModal(rep); });
       actions.appendChild(emailBtn);
     }
-
-    const profileBtn = document.createElement('button');
-    profileBtn.className = 'btn-outline';
-    profileBtn.textContent = '↗ Profile';
-    profileBtn.addEventListener('click', e => { e.stopPropagation(); openRepProfile(rep); });
-    actions.appendChild(profileBtn);
 
     card.appendChild(actions);
     return card;
