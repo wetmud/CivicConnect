@@ -40,7 +40,7 @@ INDEX_FILE      = OUTPUT_DIR / "index.json"
 CLAUDE_MODEL    = "claude-sonnet-4-20250514"
 REQUEST_TIMEOUT = 30
 REQUEST_DELAY   = 2   # seconds between HTTP requests — be polite
-SSL_VERIFY      = True   # Use certifi bundle; set False only if cert issues recur in CI
+SSL_VERIFY      = False  # eScribe site has cert chain issues in CI — disabled 2026-03-25
 
 def _calendar_url_for_month(year: int, month: int) -> str:
     """eSCRIBE calendar accepts a StartDate param to load a specific month."""
@@ -114,8 +114,12 @@ def fetch_recent_meetings(limit: int = 5) -> list[dict]:
                 if uid in meetings_seen:
                     continue
                 print(f"    → UUID {uid[:8]}… | raw text: {repr(text[:80])}")
-                date_str = _parse_date_from_text(text)
-                title = text.split("\n")[0].strip() or "Burlington City Council"
+                # Only scan the last line for a date — the calendar link format is
+                # "Meeting Title\nDate", so parsing the full text risks grabbing a
+                # date embedded in the meeting title (e.g. "Update - Oct 1 to Dec 31, 2020").
+                lines = [l.strip() for l in text.split("\n") if l.strip()]
+                date_str = _parse_date_from_text(lines[-1]) if lines else None
+                title = lines[0] if lines else "Burlington City Council"
                 if date_str:
                     meetings_seen[uid] = {"id": uid, "title": title, "date": date_str}
                     print(f"      ✓ Parsed date: {date_str}")
