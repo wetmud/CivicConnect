@@ -89,7 +89,7 @@
       },
       "sameAs": [
         "https://github.com/wetmud/CivicConnect",
-        "https://ko-fi.com/jasonsteltman"
+        "https://ko-fi.com/civicengagement"
       ],
       "audience": {
         "@type": "Audience",
@@ -113,7 +113,7 @@
       },
       "sameAs": [
         "https://github.com/wetmud/CivicConnect",
-        "https://ko-fi.com/jasonsteltman"
+        "https://ko-fi.com/civicengagement"
       ],
       "areaServed": {
         "@type": "Country",
@@ -185,7 +185,7 @@
           "name": "Who built CivicEngage?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "CivicEngage was built by Jason Steltman, an independent developer based in Canada. It is open-source and available on GitHub at github.com/wetmud/CivicConnect. You can support the project at ko-fi.com/jasonsteltman."
+            "text": "CivicEngage was built by Jason Steltman, an independent developer based in Canada. It is open-source and available on GitHub at github.com/wetmud/CivicConnect. You can support the project at ko-fi.com/civicengagement."
           }
         }
       ]
@@ -856,44 +856,70 @@
       .about-body p { font-size: 0.82rem; line-height: 1.6; }
     }
 
-    /* FAQ section */
-    .faq-section {
+    /* FAQ modal */
+    .faq-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .faq-modal-backdrop.open { display: flex; }
+    .faq-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
       width: 100%;
-      max-width: 680px;
-      margin: 3rem auto 0;
-      padding: 0 0.25rem;
+      max-width: 620px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 2rem;
+      animation: fadeUp 0.3s ease;
     }
-    .faq-section h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.1rem;
-      color: var(--text);
-      margin: 0 0 1.25rem;
-      font-weight: 400;
-    }
+    .faq-modal .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .faq-modal .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+    .faq-modal .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.4rem; }
+    .faq-modal .modal-close:hover { color: var(--text); }
     .faq-item {
       border-top: 1px solid var(--border);
-      padding: 1rem 0;
     }
     .faq-item:last-child { border-bottom: 1px solid var(--border); }
-    .faq-item h3 {
+    .faq-item summary {
       font-family: 'DM Mono', monospace;
       font-size: 0.82rem;
       font-weight: 500;
       color: var(--text);
-      margin: 0 0 0.4rem;
+      padding: 0.85rem 0;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       letter-spacing: 0.01em;
+      user-select: none;
     }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+      content: '+';
+      font-size: 1rem;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+      margin-left: 1rem;
+    }
+    .faq-item[open] summary::after { content: '−'; }
+    .faq-item summary:hover { color: var(--accent); }
     .faq-item p {
       font-size: 0.8rem;
       color: var(--text-muted);
       line-height: 1.7;
-      margin: 0;
+      margin: 0 0 0.85rem;
     }
-    @media (max-width: 480px) {
-      .faq-section { margin-top: 2rem; }
-      .faq-item h3 { font-size: 0.78rem; }
-      .faq-item p { font-size: 0.76rem; }
-    }
+    /* hidden static FAQ for crawlers */
+    .faq-section-static { display: none; }
 
     .search-box {
       width: 100%;
@@ -2450,6 +2476,7 @@
   <div class="header-right">
     <span class="tagline">Know who represents you 🍁</span>
     <button class="btn-about" onclick="openAbout()">About</button>
+    <button class="btn-about" onclick="openFaq()">FAQ</button>
     <button class="btn-about" onclick="openTips()">💡 Tips</button>
     <button class="btn-donate" onclick="openSupport()">☕ Support</button>
     <button class="btn-menu" onclick="toggleHeaderMenu()" aria-label="Menu" aria-expanded="false" id="header-menu-btn">···</button>
@@ -2459,6 +2486,7 @@
   </div>
   <div class="header-menu-dropdown" id="header-menu-dropdown">
     <button onclick="openAbout();toggleHeaderMenu()">About</button>
+    <button onclick="openFaq();toggleHeaderMenu()">FAQ</button>
     <button onclick="openTips();toggleHeaderMenu()">💡 Tips</button>
     <button onclick="openSupport();toggleHeaderMenu()">☕ Support</button>
   </div>
@@ -2495,50 +2523,36 @@
 
   </div>
 
-  <!-- FAQ section — visible static HTML for crawler indexability and AI citation -->
-  <section class="faq-section" id="faq">
+  <!-- FAQ static HTML — hidden from view but indexed by crawlers -->
+  <section class="faq-section-static" id="faq" aria-hidden="true">
     <h2>Frequently Asked Questions</h2>
-
-    <div class="faq-item">
-      <h3>What is CivicEngage?</h3>
-      <p>CivicEngage (civicengagement.ca) is a free Canadian tool that lets you find every elected official who represents you — your federal MP, your provincial MPP, and your city councillor — by entering your address. You can then write to them directly using a built-in email composer. No account required. No data collected.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>How do I find my MP in Canada?</h3>
-      <p>Enter your Canadian address and CivicEngage instantly shows your Member of Parliament (MP), with contact info and voting record. No signup required.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>Can I find my MPP and city councillor too?</h3>
-      <p>Yes. CivicEngage shows representatives at all three levels of government: your federal MP, your provincial MPP (or MLA/MNA), and your city councillor — all from one address search. It is the only free Canadian tool that does all three at once.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>Is CivicEngage free?</h3>
-      <p>Completely free. CivicEngage is open-source and funded by voluntary donations. No subscription, no paywall, no account required.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>What provinces are covered?</h3>
-      <p>CivicEngage works for all Canadian provinces and territories. Federal MPs are shown for every address in Canada. Provincial and municipal coverage depends on data availability from the Represent API.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>How is CivicEngage different from ourcommons.ca?</h3>
-      <p>Government tools like ourcommons.ca show only federal MPs. CivicEngage shows your MP, MPP, and city councillor in a single search. It also includes a built-in email composer, an AI civic assistant (Civil), ward boundary maps, and MP voting records. It is independent — not affiliated with any government.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>What is the Civil AI assistant?</h3>
-      <p>Civil is a built-in AI assistant that helps you navigate civic issues — figuring out which level of government handles a problem, finding the right department to contact, or understanding how to write an effective message to your representative. It is free and requires no account.</p>
-    </div>
-
-    <div class="faq-item">
-      <h3>Who built CivicEngage?</h3>
-      <p>CivicEngage was built by Jason Steltman, an independent developer based in Canada. It is open-source on GitHub at github.com/wetmud/CivicConnect. You can support the project at ko-fi.com/jasonsteltman or email hello@civicengagement.ca.</p>
-    </div>
+    <div class="faq-item"><h3>What is CivicEngage?</h3><p>CivicEngage (civicengagement.ca) is a free Canadian tool that lets you find every elected official who represents you — your federal MP, your provincial MPP, and your city councillor — by entering your address. You can then write to them directly using a built-in email composer. No account required. No data collected.</p></div>
+    <div class="faq-item"><h3>How do I find my MP in Canada?</h3><p>Enter your Canadian address and CivicEngage instantly shows your Member of Parliament (MP), with contact info and voting record. No signup required.</p></div>
+    <div class="faq-item"><h3>Can I find my MPP and city councillor too?</h3><p>Yes. CivicEngage shows representatives at all three levels of government: your federal MP, your provincial MPP (or MLA/MNA), and your city councillor — all from one address search. It is the only free Canadian tool that does all three at once.</p></div>
+    <div class="faq-item"><h3>Is CivicEngage free?</h3><p>Completely free. CivicEngage is open-source and funded by voluntary donations. No subscription, no paywall, no account required.</p></div>
+    <div class="faq-item"><h3>What provinces are covered?</h3><p>CivicEngage works for all Canadian provinces and territories. Federal MPs are shown for every address in Canada. Provincial and municipal coverage depends on data availability from the Represent API.</p></div>
+    <div class="faq-item"><h3>How is CivicEngage different from ourcommons.ca?</h3><p>Government tools like ourcommons.ca show only federal MPs. CivicEngage shows your MP, MPP, and city councillor in a single search. It also includes a built-in email composer, an AI civic assistant (Civil), ward boundary maps, and MP voting records. It is independent — not affiliated with any government.</p></div>
+    <div class="faq-item"><h3>What is the Civil AI assistant?</h3><p>Civil is a built-in AI assistant that helps you navigate civic issues — figuring out which level of government handles a problem, finding the right department to contact, or understanding how to write an effective message to your representative. It is free and requires no account.</p></div>
+    <div class="faq-item"><h3>Who built CivicEngage?</h3><p>CivicEngage was built by Jason Steltman, an independent developer based in Canada. It is open-source on GitHub at github.com/wetmud/CivicConnect. You can support the project at ko-fi.com/civicengagement or email hello@civicengagement.ca.</p></div>
   </section>
+
+  <!-- FAQ modal -->
+  <div class="faq-modal-backdrop" id="faq-backdrop" onclick="if(event.target===this)closeFaq()">
+    <div class="faq-modal" role="dialog" aria-modal="true" aria-label="FAQ">
+      <div class="modal-header">
+        <span class="modal-title">Frequently Asked Questions</span>
+        <button class="modal-close" onclick="closeFaq()">✕</button>
+      </div>
+      <details class="faq-item" open><summary>What is CivicEngage?</summary><p>CivicEngage (civicengagement.ca) is a free Canadian tool that lets you find every elected official who represents you — your federal MP, your provincial MPP, and your city councillor — by entering your address. You can then write to them directly using a built-in email composer. No account required. No data collected.</p></details>
+      <details class="faq-item"><summary>How do I find my MP in Canada?</summary><p>Enter your Canadian address and CivicEngage instantly shows your Member of Parliament (MP), with contact info and voting record. No signup required.</p></details>
+      <details class="faq-item"><summary>Can I find my MPP and city councillor too?</summary><p>Yes. CivicEngage shows representatives at all three levels of government: your federal MP, your provincial MPP (or MLA/MNA), and your city councillor — all from one address search. It is the only free Canadian tool that does all three at once.</p></details>
+      <details class="faq-item"><summary>Is CivicEngage free?</summary><p>Completely free. CivicEngage is open-source and funded by voluntary donations. No subscription, no paywall, no account required.</p></details>
+      <details class="faq-item"><summary>What provinces are covered?</summary><p>CivicEngage works for all Canadian provinces and territories. Federal MPs are shown for every address in Canada. Provincial and municipal coverage depends on data availability from the Represent API.</p></details>
+      <details class="faq-item"><summary>How is CivicEngage different from ourcommons.ca?</summary><p>Government tools like ourcommons.ca show only federal MPs. CivicEngage shows your MP, MPP, and city councillor in a single search. It also includes a built-in email composer, an AI civic assistant (Civil), ward boundary maps, and MP voting records. It is independent — not affiliated with any government.</p></details>
+      <details class="faq-item"><summary>What is the Civil AI assistant?</summary><p>Civil is a built-in AI assistant that helps you navigate civic issues — figuring out which level of government handles a problem, finding the right department to contact, or understanding how to write an effective message to your representative. It is free and requires no account.</p></details>
+      <details class="faq-item"><summary>Who built CivicEngage?</summary><p>CivicEngage was built by Jason Steltman, an independent developer based in Canada. It is open-source on GitHub at github.com/wetmud/CivicConnect. You can support the project at ko-fi.com/civicengagement or email hello@civicengagement.ca.</p></details>
+    </div>
+  </div>
 
   <div id="profile-card">
     <div class="profile-info">
@@ -2673,7 +2687,7 @@
     </div>
     <div class="about-links">
       <a href="https://github.com/wetmud/CivicEngagement" target="_blank" rel="noopener">GitHub ↗</a>
-      <a href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">☕ Buy me a coffee</a>
+      <a href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">☕ Buy me a coffee</a>
       <a href="https://github.com/wetmud/CivicEngagement/issues/new" target="_blank" rel="noopener">Report a bug ↗</a>
       <a href="mailto:hello@civicengagement.ca">hello@civicengagement.ca</a>
     </div>
@@ -2689,7 +2703,7 @@
       <h2>Keep It Running</h2>
       <p class="support-hero-sub">Civic Engagement is free and always will be. Running costs have gone up — if you find it useful, a contribution goes a long way.</p>
       <div class="support-hero-actions">
-        <a class="support-cta" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">☕ Support Now</a>
+        <a class="support-cta" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">☕ Support Now</a>
         <a class="support-cta-outline" href="https://github.com/wetmud/CivicEngagement/issues/new?template=feature_request.md&title=Feature+Request" target="_blank" rel="noopener">✦ Recommend a Feature</a>
       </div>
     </div>
@@ -2731,26 +2745,26 @@
       <div class="support-section-title">Give What You Can</div>
       <p class="support-costs-sub">One-time contribution. No recurring charges unless you choose.</p>
       <div class="support-tiers">
-        <a class="support-tier" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">
+        <a class="support-tier" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">
           <span class="support-tier-amount">$5</span>
           <span class="support-tier-label">A coffee</span>
         </a>
-        <a class="support-tier" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">
+        <a class="support-tier" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">
           <span class="support-tier-amount">$10</span>
           <span class="support-tier-label">A few hours</span>
         </a>
-        <a class="support-tier support-tier-featured" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">
+        <a class="support-tier support-tier-featured" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">
           <span class="support-tier-amount">$25</span>
           <span class="support-tier-label">Popular ★</span>
         </a>
-        <a class="support-tier" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">
+        <a class="support-tier" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">
           <span class="support-tier-amount">$50</span>
           <span class="support-tier-label">A month of work</span>
         </a>
       </div>
     </div>
 
-    <a class="support-cta support-cta-full" href="https://ko-fi.com/jasonsteltman" target="_blank" rel="noopener">☕ Support on Ko-fi →</a>
+    <a class="support-cta support-cta-full" href="https://ko-fi.com/civicengagement" target="_blank" rel="noopener">☕ Support on Ko-fi →</a>
     <p class="support-fine-print">All amounts in CAD. Payments processed securely by Ko-fi.</p>
 
     <div style="margin:1.25rem 0 1rem;padding:1rem 1.25rem;background:color-mix(in srgb,var(--accent) 6%,var(--bg));border-radius:10px;border-left:3px solid var(--accent);">
@@ -2851,6 +2865,9 @@
   }
 
   // ── Tips modal ────────────────────────────────────────────
+  function openFaq() { document.getElementById('faq-backdrop').classList.add('open'); }
+  function closeFaq() { document.getElementById('faq-backdrop').classList.remove('open'); }
+
   function openTips() { document.getElementById('tips-backdrop').classList.add('open'); }
   function closeTips(e) {
     if (!e || e.target === document.getElementById('tips-backdrop')) {
@@ -3528,7 +3545,6 @@
     hideDropdown();
 
     document.getElementById('results-container').style.display = 'block';
-    document.getElementById('faq').style.display = 'none';
     document.getElementById('results-reps').innerHTML = `<div class="loading"><div class="spinner"></div>Finding representatives...</div>`;
     document.getElementById('results-services').innerHTML = `<div class="loading"><div class="spinner"></div>Finding nearby services...</div>`;
 
